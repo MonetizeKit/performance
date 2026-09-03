@@ -57,7 +57,7 @@ jobs:
 
       # `enablement` turns Pages on for the repository the first time, with the
       # source set to Actions, so publishing needs no click in Settings.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         with:
           enablement: true
 
