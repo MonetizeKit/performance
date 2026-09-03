@@ -6,6 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "perf:env": "tsx src/env.ts",
     "perf:run": "tsx src/run.ts",
     "perf:collect": "tsx src/collect.ts",
     "perf:analyze": "tsx src/analyze.ts",

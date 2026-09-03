@@ -67,10 +67,21 @@ billing records. Point this at a tenant whose history you are willing to grow.
 
 ## Configuration
 
-Set in the `Delivery` GitHub Environment (MonetizeKit syncs them from Phase.dev;
-a fork sets them directly). Secrets:
+The facts about the target live in the application's Phase.dev environment for
+the stage (`Delivery`), and the nightly reads them from there: `perf:env` runs
+first, exports the keys below from Phase with `PHASE_SERVICE_TOKEN`, masks the
+secret ones and writes them to `$GITHUB_ENV`. Phase also mirrors that
+environment into this repository's `Delivery` GitHub Environment, and those
+mirrored secrets are the fallback — for a fork without Phase, which sets them
+directly. They are only a fallback because GitHub admits at most 100 secrets per
+environment and Phase drops the overflow silently; the application stage already
+holds more than that, so a newly published fact would never arrive by mirror.
 
-| Secret | Purpose |
+`perf:env` needs `PHASE_SERVICE_TOKEN` in the GitHub Environment, and reads
+`PHASE_ENVIRONMENT` (default `Delivery`) and `PHASE_APP` (default the MonetizeKit
+app) from repository variables. Everything else it takes from Phase:
+
+| Key | Purpose |
 |---|---|
 | `PERF_BASE_URL` (or `DEMO_TARGET_BASE_URL`, `APP_BASE_URL`, `NEXT_PUBLIC_APP_URL`, first set wins) | Origin of the deployment to measure |
 | `PERF_API_KEY` (or `DEMO_WORKSPACE_API_KEY`) | Secret key of the workspace under test |
@@ -81,7 +92,9 @@ a fork sets them directly). Secrets:
 | `PERF_REPORT_RECIPIENTS`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` | Email delivery |
 
 At least one reporting channel — Slack or email — must be configured; the
-report refuses to render into the void.
+report refuses to render into the void. The job log's *Resolve the target's
+facts* step lists every key with where it came from (Phase, the GitHub
+environment, or unset) and never its value.
 
 ### Slack
 
@@ -104,13 +117,17 @@ Repository variables (public facts and gates, not secrets):
 | Variable | Default | Purpose |
 |---|---|---|
 | `PERF_NIGHTLY_ENABLED` | off | Enables the schedule. A manual dispatch runs regardless. |
+| `PHASE_ENVIRONMENT` | `Delivery` | Phase environment `perf:env` reads the target's facts from |
+| `PHASE_APP` | `Entitlements.C9D.Engineering` | Phase application holding that environment |
 | `PERF_APP_REPOSITORY_URL` | the MonetizeKit application repo | Where compare and commit links point |
 | `PERF_SITE_URL` | `https://<owner>.github.io/<repo>` | Canonical origin of the published site; change it only for a custom domain (see below) |
 | `SLACK_PERF_CHANNEL` | `#performance` | Where the bot token posts; ignored when a webhook is set |
 
 ## Turning it on
 
-1. Configure the `Delivery` environment secrets above.
+1. Put `PHASE_SERVICE_TOKEN` in the `Delivery` GitHub Environment (Phase syncs
+   its own token along with the rest), or, without Phase, set the secrets above
+   directly.
 2. Dispatch **Nightly performance run** with `smoke: true` and `dry_run: true`.
    It measures for two minutes and publishes nothing; read the artifact.
 3. Dispatch again with `dry_run: false`. The first record creates `perf-data`

@@ -52,39 +52,21 @@ jobs:
     # The k6 workload alone is ~71 minutes (seven authenticated scenarios at ten
     # minutes each, sequential); the rest is setup, collection and reporting.
     timeout-minutes: 120
-    # The GitHub Environment that Phase.dev syncs the target's secrets into.
+    # The GitHub Environment Phase.dev mirrors the target's secrets into. The
+    # mirror is the fallback; `perf:env` below reads the same facts from Phase
+    # directly when it can (see that step).
     environment:
       name: Delivery
     env:
       PERF_ENVIRONMENT: ${{ inputs.environment || 'delivery' }}
-      # Where and as whom to measure. The `DEMO_*` names are what the application
-      # repository's seeder publishes; `PERF_*` override them when a separate
-      # target is wanted.
-      # `NEXT_PUBLIC_APP_URL` is the application's own public origin, present in
-      # every Phase environment, so a freshly synced stage needs no extra secret.
-      PERF_BASE_URL: ${{ secrets.PERF_BASE_URL || secrets.DEMO_TARGET_BASE_URL || secrets.APP_BASE_URL || secrets.NEXT_PUBLIC_APP_URL }}
-      PERF_API_KEY: ${{ secrets.PERF_API_KEY || secrets.DEMO_WORKSPACE_API_KEY }}
-      PERF_DATASET_VERSION: ${{ secrets.PERF_DATASET_VERSION || secrets.DEMO_DATASET_VERSION }}
-      # A stage behind Vercel Deployment Protection answers every request with a
-      # 302 to a login page; this lets the preflight and k6 through. Sent as
-      # `x-vercel-protection-bypass` and never when unset.
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       # The application under test, for compare and commit links. A variable, not
       # a secret: it is a public address.
       PERF_APP_REPOSITORY_URL: ${{ vars.PERF_APP_REPOSITORY_URL || 'https://github.com/MonetizeKit/app-monetizekit-monorepo' }}
       # Where results are served. Derived from this repository's Pages address
       # when unset; set it only for a custom domain.
       PERF_SITE_URL: ${{ vars.PERF_SITE_URL }}
-      # Slack and email are independent channels: losing one is reported, losing
-      # both is an error. Configuring either is enough. Slack takes a webhook or,
-      # failing that, the workspace's existing bot token (chat:write), which
-      # posts to `SLACK_PERF_CHANNEL` — so nothing has to be created by hand.
-      SLACK_PERF_WEBHOOK_URL: ${{ secrets.SLACK_PERF_WEBHOOK_URL }}
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      # Where the bot token posts; ignored when a webhook is configured.
       SLACK_PERF_CHANNEL: ${{ vars.SLACK_PERF_CHANNEL || '#performance' }}
-      PERF_REPORT_RECIPIENTS: ${{ secrets.PERF_REPORT_RECIPIENTS }}
-      SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-      SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
       # The trigger decides whether this run may form part of a baseline, so it
       # is recorded rather than inferred from the runner.
       PERF_TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'dispatch' }}
@@ -111,6 +93,54 @@ jobs:
         uses: grafana/setup-k6-action@v1
         with:
           k6-version: "1.4.0"
+
+      # Pinned for the same reason as k6, and matched to the version the
+      # application repository pins so both read Phase the same way.
+      - name: Install the Phase CLI
+        if: ${{ secrets.PHASE_SERVICE_TOKEN != '' }}
+        env:
+          PHASE_CLI_VERSION: "2.0.0"
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/phase" \
+            "https://github.com/phasehq/cli/releases/download/v${PHASE_CLI_VERSION}/phase_cli_${PHASE_CLI_VERSION}_linux_amd64"
+          chmod +x "$RUNNER_TEMP/phase"
+          echo "PHASE_CLI=$RUNNER_TEMP/phase" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/phase" --version
+
+      # Where and as whom to measure, and where to report. The facts live in the
+      # application's Phase environment for the stage; `perf:env` reads the ones
+      # the pipeline recognises straight from Phase and writes them to
+      # $GITHUB_ENV, masked. The mirrored secrets here are the fallback for a
+      # fork without Phase — and only a fallback, because GitHub caps an
+      # environment at 100 secrets and Phase drops the overflow silently, which
+      # is how a newly published fact (the dataset version) failed to arrive.
+      #
+      # The `DEMO_*` names are what the application repository's seeder
+      # publishes; `PERF_*` override them when a separate target is wanted.
+      # `NEXT_PUBLIC_APP_URL` is the application's own public origin, so a stage
+      # that is configured at all needs no perf-specific copy of it. Slack and
+      # email are independent channels: either is enough; Slack takes a webhook
+      # or, failing that, the workspace's existing bot token (chat:write).
+      - name: Resolve the target's facts
+        env:
+          PHASE_SERVICE_TOKEN: ${{ secrets.PHASE_SERVICE_TOKEN }}
+          PHASE_ENVIRONMENT: ${{ vars.PHASE_ENVIRONMENT || 'Delivery' }}
+          PHASE_APP: ${{ vars.PHASE_APP || 'Entitlements.C9D.Engineering' }}
+          PERF_BASE_URL: ${{ secrets.PERF_BASE_URL }}
+          DEMO_TARGET_BASE_URL: ${{ secrets.DEMO_TARGET_BASE_URL }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          PERF_API_KEY: ${{ secrets.PERF_API_KEY }}
+          DEMO_WORKSPACE_API_KEY: ${{ secrets.DEMO_WORKSPACE_API_KEY }}
+          PERF_DATASET_VERSION: ${{ secrets.PERF_DATASET_VERSION }}
+          DEMO_DATASET_VERSION: ${{ secrets.DEMO_DATASET_VERSION }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SLACK_PERF_WEBHOOK_URL: ${{ secrets.SLACK_PERF_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          PERF_REPORT_RECIPIENTS: ${{ secrets.PERF_REPORT_RECIPIENTS }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+        run: pnpm --silent perf:env
 
       # `perf:run` preflights the target itself — is it serving, does the key
       # work, does the workload fit the key's rate limit — and refuses to offer
