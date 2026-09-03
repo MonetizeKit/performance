@@ -60,6 +60,10 @@ jobs:
       PERF_BASE_URL: ${{ secrets.PERF_BASE_URL || secrets.DEMO_TARGET_BASE_URL || secrets.APP_BASE_URL }}
       PERF_API_KEY: ${{ secrets.PERF_API_KEY || secrets.DEMO_WORKSPACE_API_KEY }}
       PERF_DATASET_VERSION: ${{ secrets.PERF_DATASET_VERSION || secrets.DEMO_DATASET_VERSION }}
+      # A stage behind Vercel Deployment Protection answers every request with a
+      # 302 to a login page; this lets the preflight and k6 through. Sent as
+      # `x-vercel-protection-bypass` and never when unset.
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       # The application under test, for compare and commit links. A variable, not
       # a secret: it is a public address.
       PERF_APP_REPOSITORY_URL: ${{ vars.PERF_APP_REPOSITORY_URL || 'https://github.com/MonetizeKit/app-monetizekit-monorepo' }}
