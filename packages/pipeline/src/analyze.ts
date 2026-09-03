@@ -12,7 +12,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { attribute, readChangeSetPayload } from "./lib/attribution";
 import { analyzeBaseline, offenders, statusFrom } from "./lib/baseline";
 import { parseFlags, progress, runCli } from "./lib/cli";
-import { DEFAULT_DOCUMENT, DEFAULT_STORE, display } from "./lib/paths";
+import { DEFAULT_DOCUMENT, DEFAULT_STORE, display, userPath, userPathOr } from "./lib/paths";
 import type { RunDocument } from "./lib/run-document";
 import { appRepositoryUrl, checkoutStore, createRunner, PerfStore } from "./lib/store";
 
@@ -40,13 +40,13 @@ async function main() {
     return undefined;
   }
 
-  const documentPath = flags.value("run") ?? DEFAULT_DOCUMENT;
+  const documentPath = userPathOr(flags.value("run"), DEFAULT_DOCUMENT);
   if (!existsSync(documentPath)) {
     throw new Error(`${documentPath} does not exist; run \`pnpm perf:collect\` first.`);
   }
   const document = JSON.parse(readFileSync(documentPath, "utf8")) as RunDocument;
 
-  const storeDirectory = flags.value("store") ?? DEFAULT_STORE;
+  const storeDirectory = userPathOr(flags.value("store"), DEFAULT_STORE);
   const store =
     flags.has("no-fetch") && existsSync(storeDirectory)
       ? new PerfStore(storeDirectory)
@@ -63,7 +63,7 @@ async function main() {
     previousAppSha: store.lastAppSha(document.environment),
     appSha: document.appSha,
     appRepositoryUrl: appRepositoryUrl(),
-    payload: payloadPath ? readChangeSetPayload(payloadPath) : null,
+    payload: payloadPath ? readChangeSetPayload(userPath(payloadPath)) : null,
   });
 
   document.baseline = analysis;

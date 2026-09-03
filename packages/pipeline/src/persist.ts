@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { parseFlags, progress, runCli } from "./lib/cli";
 import { writeSite } from "./lib/dashboard";
-import { DEFAULT_DOCUMENT, DEFAULT_STORE, display } from "./lib/paths";
+import { DEFAULT_DOCUMENT, DEFAULT_STORE, display, userPathOr } from "./lib/paths";
 import { runDocumentPath, type RunDocument } from "./lib/run-document";
 import { runPagePath } from "./lib/run-page";
 import {
@@ -46,14 +46,14 @@ async function main() {
     return undefined;
   }
 
-  const documentPath = flags.value("run") ?? DEFAULT_DOCUMENT;
+  const documentPath = userPathOr(flags.value("run"), DEFAULT_DOCUMENT);
   if (!existsSync(documentPath)) {
     throw new Error(`${documentPath} does not exist; run \`pnpm perf:collect\` first.`);
   }
   const document = JSON.parse(readFileSync(documentPath, "utf8")) as RunDocument;
 
   const runner = createRunner();
-  const storeDirectory = flags.value("store") ?? DEFAULT_STORE;
+  const storeDirectory = userPathOr(flags.value("store"), DEFAULT_STORE);
   const store =
     flags.has("no-fetch") && existsSync(storeDirectory)
       ? new PerfStore(storeDirectory)

@@ -19,7 +19,7 @@ import sgMail from "@sendgrid/mail";
 
 import { comparableRuns } from "./lib/baseline";
 import { parseFlags, progress, runCli } from "./lib/cli";
-import { DEFAULT_DOCUMENT, DEFAULT_STORE, display } from "./lib/paths";
+import { DEFAULT_DOCUMENT, DEFAULT_STORE, display, userPath, userPathOr } from "./lib/paths";
 import { renderHtml, renderText, subjectFor, type ReportInput } from "./lib/report";
 import { runDocumentPath, type RunDocument } from "./lib/run-document";
 import { runPagePath } from "./lib/run-page";
@@ -169,7 +169,7 @@ async function main() {
     return undefined;
   }
 
-  const documentPath = flags.value("run") ?? DEFAULT_DOCUMENT;
+  const documentPath = userPathOr(flags.value("run"), DEFAULT_DOCUMENT);
   if (!existsSync(documentPath)) {
     throw new Error(`${documentPath} does not exist; run \`pnpm perf:collect\` first.`);
   }
@@ -182,7 +182,7 @@ async function main() {
     );
   }
 
-  const storeDirectory = flags.value("store") ?? DEFAULT_STORE;
+  const storeDirectory = userPathOr(flags.value("store"), DEFAULT_STORE);
   const store =
     flags.has("no-fetch") && existsSync(storeDirectory)
       ? new PerfStore(storeDirectory)
@@ -201,7 +201,7 @@ async function main() {
   const html = renderHtml(input);
   const text = renderText(input);
 
-  const outputPath = flags.value("out");
+  const outputPath = flags.value("out") === undefined ? undefined : userPath(flags.value("out")!);
   if (outputPath) {
     mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, html, "utf8");

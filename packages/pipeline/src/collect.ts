@@ -19,6 +19,7 @@ import {
   DEFAULT_DOCUMENT as DEFAULT_OUTPUT,
   DEFAULT_SUMMARY,
   display,
+  userPathOr,
 } from "./lib/paths";
 import { readRunContext } from "./lib/run-context";
 import {
@@ -45,7 +46,7 @@ async function main() {
     return undefined;
   }
 
-  const contextPath = flags.value("context") ?? DEFAULT_CONTEXT;
+  const contextPath = userPathOr(flags.value("context"), DEFAULT_CONTEXT);
   if (!existsSync(contextPath)) {
     throw new Error(
       `${contextPath} does not exist. Run \`pnpm perf:run\` first — the run context `
@@ -55,7 +56,7 @@ async function main() {
   }
   const context = readRunContext(contextPath);
 
-  const summaryPath = flags.value("summary") ?? context.summaryPath ?? DEFAULT_SUMMARY;
+  const summaryPath = userPathOr(flags.value("summary"), context.summaryPath ?? DEFAULT_SUMMARY);
   if (!existsSync(summaryPath)) {
     throw new Error(`${summaryPath} does not exist; k6 wrote no summary to collect.`);
   }
@@ -63,7 +64,7 @@ async function main() {
   // The run records which catalog it offered load from, so the collector reads
   // the SLOs that were actually enforced instead of whichever catalog happens
   // to be the default by the time it runs.
-  const catalogPath = flags.value("catalog") ?? context.catalogPath ?? SCENARIOS_PATH;
+  const catalogPath = userPathOr(flags.value("catalog"), context.catalogPath ?? SCENARIOS_PATH);
   const catalog = loadScenarioCatalog(catalogPath);
   if (catalog.workloadVersion !== context.workloadVersion) {
     throw new Error(
@@ -116,7 +117,7 @@ async function main() {
     notes,
   };
 
-  const outputPath = flags.value("out") ?? DEFAULT_OUTPUT;
+  const outputPath = userPathOr(flags.value("out"), DEFAULT_OUTPUT);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`, "utf8");
 

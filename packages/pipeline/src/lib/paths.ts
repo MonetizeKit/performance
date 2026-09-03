@@ -29,3 +29,20 @@ export const DEFAULT_STORE = join(REPO_ROOT, ".perf-data");
 export function display(path: string): string {
   return path.startsWith(REPO_ROOT) ? path.slice(REPO_ROOT.length + 1) : path;
 }
+
+/**
+ * Resolve a path the user typed on the command line.
+ *
+ * `pnpm --filter` runs a package's scripts with the package directory as the
+ * working directory, so `--out .perf/report.html` typed at the repository root
+ * would otherwise land in `packages/pipeline/.perf/`. pnpm records where it
+ * was invoked in `INIT_CWD`; that is the directory the user meant.
+ */
+export function userPath(path: string, env: Record<string, string | undefined> = process.env): string {
+  return resolve(env.INIT_CWD?.trim() || process.cwd(), path);
+}
+
+/** `userPath` for an optional flag. */
+export function userPathOr(path: string | undefined, fallback: string): string {
+  return path === undefined ? fallback : userPath(path);
+}

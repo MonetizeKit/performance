@@ -9,7 +9,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname } from "node:path";
 
 import { parseFlags, progress, runCli } from "./lib/cli";
 import {
@@ -19,6 +19,7 @@ import {
   K6_ENTRYPOINT,
   SCENARIOS_PATH,
   SMOKE_SCENARIOS_PATH,
+  userPathOr,
 } from "./lib/paths";
 import { resolveTrigger, writeRunContext } from "./lib/run-context";
 import { newRunId } from "./lib/run-document";
@@ -74,8 +75,9 @@ async function main() {
   }
 
   const target = resolveTarget();
-  const catalogPath = resolve(
-    flags.value("catalog") ?? (flags.has("smoke") ? SMOKE_SCENARIOS_PATH : SCENARIOS_PATH),
+  const catalogPath = userPathOr(
+    flags.value("catalog"),
+    flags.has("smoke") ? SMOKE_SCENARIOS_PATH : SCENARIOS_PATH,
   );
   const catalog = loadScenarioCatalog(catalogPath);
   const binary = process.env.K6_BINARY?.trim() || "k6";
@@ -92,8 +94,8 @@ async function main() {
   }
 
   const runId = flags.value("run-id") ?? newRunId();
-  const summaryPath = flags.value("summary") ?? DEFAULT_SUMMARY;
-  const contextPath = flags.value("context") ?? DEFAULT_CONTEXT;
+  const summaryPath = userPathOr(flags.value("summary"), DEFAULT_SUMMARY);
+  const contextPath = userPathOr(flags.value("context"), DEFAULT_CONTEXT);
   const startedAt = new Date().toISOString();
   mkdirSync(dirname(summaryPath), { recursive: true });
 

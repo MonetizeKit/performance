@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 import { parseFlags, progress, runCli } from "./lib/cli";
 import { DASHBOARD_PATH, writeSite } from "./lib/dashboard";
-import { DEFAULT_STORE, display } from "./lib/paths";
+import { DEFAULT_STORE, display, userPathOr } from "./lib/paths";
 import { checkoutStore, createRunner, PerfStore, PERF_DATA_BRANCH } from "./lib/store";
 
 const HELP = `
@@ -35,12 +35,12 @@ async function main() {
     return undefined;
   }
 
-  const storeDirectory = flags.value("store") ?? DEFAULT_STORE;
+  const storeDirectory = userPathOr(flags.value("store"), DEFAULT_STORE);
   const store = flags.has("no-fetch")
     ? new PerfStore(storeDirectory)
     : checkoutStore({ runner: createRunner(), directory: storeDirectory });
 
-  const outPath = flags.value("out") ?? join(store.root, DASHBOARD_PATH);
+  const outPath = userPathOr(flags.value("out"), join(store.root, DASHBOARD_PATH));
   const result = writeSite(store, { outPath, maxRuns: flags.int("max-runs") });
 
   progress(`Rendered ${outPath} from ${result.runs} run(s)`);
