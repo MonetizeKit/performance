@@ -215,6 +215,80 @@ export function resolveSlackWebhookUrl(
   return env.SLACK_PERF_WEBHOOK_URL?.trim() || null;
 }
 
+/** The channel a bot token posts to when nothing else is configured. */
+export const DEFAULT_SLACK_CHANNEL = "#performance";
+
+const CHAT_POST_MESSAGE_URL = "https://slack.com/api/chat.postMessage";
+
+/**
+ * How the post reaches Slack.
+ *
+ * Two routes, because they cost different things to set up. An incoming webhook
+ * is bound to one channel when a human creates it in the Slack app settings; a
+ * bot token needs no such ceremony — the workspace's existing app already holds
+ * `chat:write` and `chat:write.public`, so it can post to any public channel by
+ * name — which is what lets a freshly synced environment report on its first
+ * night with nothing created by hand. The webhook wins when both are present,
+ * because setting one is the more deliberate act.
+ */
+export type SlackDelivery =
+  | { kind: "webhook"; url: string }
+  | { kind: "bot"; token: string; channel: string };
+
+export function resolveSlackDelivery(
+  env: Record<string, string | undefined> = process.env,
+): SlackDelivery | null {
+  const url = resolveSlackWebhookUrl(env);
+  if (url) return { kind: "webhook", url };
+
+  const token = env.SLACK_BOT_TOKEN?.trim();
+  if (!token) return null;
+  return { kind: "bot", token, channel: env.SLACK_PERF_CHANNEL?.trim() || DEFAULT_SLACK_CHANNEL };
+}
+
+/** A human-readable name for where the post goes, for logs and dry runs. */
+export function describeSlackDelivery(delivery: SlackDelivery): string {
+  switch (delivery.kind) {
+    case "webhook":
+      return "incoming webhook";
+    case "bot":
+      return `bot token → ${delivery.channel}`;
+    default: {
+      const exhaustive: never = delivery;
+      throw new Error(`unhandled Slack delivery ${String(exhaustive)}`);
+    }
+  }
+}
+
+function requestFor(
+  delivery: SlackDelivery,
+  message: SlackMessage,
+): { url: string; headers: Record<string, string>; body: string } {
+  switch (delivery.kind) {
+    case "webhook":
+      return {
+        url: delivery.url,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(message),
+      };
+    case "bot":
+      return {
+        url: CHAT_POST_MESSAGE_URL,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          authorization: `Bearer ${delivery.token}`,
+        },
+        // Links are already labelled; an unfurl would append a preview card of
+        // the run page under every post.
+        body: JSON.stringify({ channel: delivery.channel, ...message, unfurl_links: false }),
+      };
+    default: {
+      const exhaustive: never = delivery;
+      throw new Error(`unhandled Slack delivery ${String(exhaustive)}`);
+    }
+  }
+}
+
 /**
  * Post the report to Slack.
  *
@@ -224,30 +298,38 @@ export function resolveSlackWebhookUrl(
  */
 export async function postSlackReport(
   message: SlackMessage,
-  deps: { fetchFn?: FetchLike; webhookUrl?: string | null } = {},
+  deps: { fetchFn?: FetchLike; webhookUrl?: string | null; delivery?: SlackDelivery | null } = {},
 ): Promise<SlackDeliveryResult> {
-  const webhookUrl =
-    deps.webhookUrl === undefined ? resolveSlackWebhookUrl() : deps.webhookUrl;
-  if (!webhookUrl) return { delivered: false, reason: "not_configured" };
+  const delivery =
+    deps.delivery !== undefined
+      ? deps.delivery
+      : deps.webhookUrl !== undefined
+        ? deps.webhookUrl ? { kind: "webhook" as const, url: deps.webhookUrl } : null
+        : resolveSlackDelivery();
+  if (!delivery) return { delivered: false, reason: "not_configured" };
 
   const fetchFn = deps.fetchFn ?? (fetch as unknown as FetchLike);
   try {
-    const response = await fetchFn(webhookUrl, {
+    const request = requestFor(delivery, message);
+    const response = await fetchFn(request.url, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(message),
+      headers: request.headers,
+      body: request.body,
     });
 
-    if (response.ok) return { delivered: true, status: response.status };
-
-    // Slack answers a bad payload with 200-and-an-error-string or a 4xx plus a
-    // one-line reason ("invalid_blocks", "no_service"); it is the only clue.
+    // A webhook answers a bad payload with a 4xx plus a one-line reason
+    // ("invalid_blocks", "no_service"). The Web API answers 200 with
+    // `{"ok":false,"error":"channel_not_found"}`, so the body has to be read
+    // either way; it is the only clue.
     const detail = await response.text?.().catch(() => undefined);
+    if (response.ok && (delivery.kind === "webhook" || webApiAccepted(detail))) {
+      return { delivered: true, status: response.status };
+    }
     return {
       delivered: false,
       reason: "delivery_failed",
       status: response.status,
-      ...(detail ? { detail: detail.slice(0, 200) } : {}),
+      ...(detail ? { detail: webApiError(detail) ?? detail.slice(0, 200) } : {}),
     };
   } catch (error) {
     return {
@@ -256,4 +338,23 @@ export async function postSlackReport(
       detail: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+function parseWebApi(body: string | undefined): { ok?: boolean; error?: string } | null {
+  if (!body) return null;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    return parsed && typeof parsed === "object" ? (parsed as { ok?: boolean; error?: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
+function webApiAccepted(body: string | undefined): boolean {
+  return parseWebApi(body)?.ok === true;
+}
+
+function webApiError(body: string | undefined): string | undefined {
+  const parsed = parseWebApi(body);
+  return parsed && parsed.ok === false ? parsed.error ?? "unknown Web API error" : undefined;
 }

@@ -25,8 +25,9 @@ import { runDocumentPath, type RunDocument } from "./lib/run-document";
 import { runPagePath } from "./lib/run-page";
 import {
   buildSlackMessage,
+  describeSlackDelivery,
   postSlackReport,
-  resolveSlackWebhookUrl,
+  resolveSlackDelivery,
   type SlackDeliveryResult,
 } from "./lib/slack";
 import {
@@ -54,7 +55,9 @@ Delivers to every configured channel. At least one is required unless --dry-run;
 losing one channel is reported, losing all of them is an error.
 
 Environment:
-  SLACK_PERF_WEBHOOK_URL  Slack incoming webhook for the nightly post
+  SLACK_PERF_WEBHOOK_URL  Slack incoming webhook for the nightly post; or
+  SLACK_BOT_TOKEN         Slack bot token (chat:write) posting to
+  SLACK_PERF_CHANNEL      this channel (default #performance)
   PERF_REPORT_RECIPIENTS  Comma-separated email recipients
   SENDGRID_API_KEY        Sender credential for email
   SENDGRID_FROM_EMAIL     Sender address (default no-reply@monetizekit.app)
@@ -134,7 +137,7 @@ function describeEmail(outcome: EmailOutcome, count: number): string {
 function describeSlack(outcome: SlackDeliveryResult): string {
   if (outcome.delivered) return "posted";
   if (outcome.reason === "not_configured") {
-    return `not posted (${outcome.detail ?? "SLACK_PERF_WEBHOOK_URL is not set"})`;
+    return `not posted (${outcome.detail ?? "neither SLACK_PERF_WEBHOOK_URL nor SLACK_BOT_TOKEN is set"})`;
   }
   return `not posted (${outcome.detail ?? `HTTP ${outcome.status ?? "error"}`})`;
 }
@@ -208,17 +211,17 @@ async function main() {
   }
 
   const to = recipients();
-  const webhookUrl = resolveSlackWebhookUrl();
+  const slackDelivery = resolveSlackDelivery();
   const dryRun = flags.has("dry-run");
 
   const emailConfigured = Boolean(process.env.SENDGRID_API_KEY?.trim()) && to.length > 0;
-  const slackConfigured = Boolean(webhookUrl);
+  const slackConfigured = slackDelivery !== null;
 
   if (!dryRun && !emailConfigured && !slackConfigured) {
     throw new Error(
       "the report has nowhere to go: neither email nor Slack is configured.\n"
         + "  Email needs SENDGRID_API_KEY and PERF_REPORT_RECIPIENTS (comma-separated).\n"
-        + "  Slack needs SLACK_PERF_WEBHOOK_URL.\n"
+        + "  Slack needs SLACK_PERF_WEBHOOK_URL, or SLACK_BOT_TOKEN with SLACK_PERF_CHANNEL (default #performance).\n"
         + "  Both are synced from Phase.dev. Pass --dry-run to render without sending.",
     );
   }
@@ -236,14 +239,17 @@ async function main() {
   const email = await deliverEmail({ dryRun, to, subject, text, html });
   const slack = dryRun
     ? { delivered: false, reason: "not_configured" as const, detail: "dry run" }
-    : await postSlackReport(slackMessage, { webhookUrl });
+    : await postSlackReport(slackMessage, { delivery: slackDelivery });
 
   if (!dryRun) {
     progress(
       `Email: ${describeEmail(email, to.length)} · Slack: ${describeSlack(slack)}`,
     );
   } else {
-    progress(`Dry run — not sending. Subject: ${subject}`);
+    progress(
+      `Dry run — not sending. Subject: ${subject}`
+        + (slackDelivery ? ` · Slack would go via ${describeSlackDelivery(slackDelivery)}` : ""),
+    );
   }
 
   const attempted = [

@@ -73,8 +73,12 @@ jobs:
       # when unset; set it only for a custom domain.
       PERF_SITE_URL: ${{ vars.PERF_SITE_URL }}
       # Slack and email are independent channels: losing one is reported, losing
-      # both is an error. Configuring either is enough.
+      # both is an error. Configuring either is enough. Slack takes a webhook or,
+      # failing that, the workspace's existing bot token (chat:write), which
+      # posts to `SLACK_PERF_CHANNEL` — so nothing has to be created by hand.
       SLACK_PERF_WEBHOOK_URL: ${{ secrets.SLACK_PERF_WEBHOOK_URL }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_PERF_CHANNEL: ${{ vars.SLACK_PERF_CHANNEL || '#performance' }}
       PERF_REPORT_RECIPIENTS: ${{ secrets.PERF_REPORT_RECIPIENTS }}
       SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
       SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}

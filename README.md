@@ -76,11 +76,28 @@ a fork sets them directly). Secrets:
 | `PERF_API_KEY` (or `DEMO_WORKSPACE_API_KEY`) | Secret key of the workspace under test |
 | `PERF_DATASET_VERSION` (or `DEMO_DATASET_VERSION`) | Version of the seeded dataset; a comparability key. Optional |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | Deployment Protection bypass, for a target behind Vercel's login page. Optional |
-| `SLACK_PERF_WEBHOOK_URL` | Slack incoming webhook for the nightly post |
+| `SLACK_PERF_WEBHOOK_URL` | Slack incoming webhook for the nightly post; or |
+| `SLACK_BOT_TOKEN` | A Slack bot token with `chat:write` (and `chat:write.public` to post without being invited). Posts to `SLACK_PERF_CHANNEL` |
 | `PERF_REPORT_RECIPIENTS`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` | Email delivery |
 
 At least one reporting channel — Slack or email — must be configured; the
 report refuses to render into the void.
+
+### Slack
+
+Two ways in; the webhook wins when both are present.
+
+- **Bot token (no setup).** If the workspace already has a Slack app with
+  `chat:write` and `chat:write.public`, sync its bot token as `SLACK_BOT_TOKEN`
+  and the report posts to `#performance` (or `SLACK_PERF_CHANNEL`) on the first
+  night. Without `chat:write.public`, invite the app to the channel once
+  (`/invite @<app>`). The Web API answers `200 {"ok":false,"error":...}` on
+  failure — `channel_not_found`, `not_in_channel`, `missing_scope` — and the
+  report surfaces that string.
+- **Incoming webhook.** In <https://api.slack.com/apps> pick the app → *Incoming
+  Webhooks* → *Activate* → *Add New Webhook to Workspace* → choose the channel
+  → copy the URL into `SLACK_PERF_WEBHOOK_URL`. A webhook is bound to one
+  channel; changing channels means a new webhook.
 
 Repository variables (public facts and gates, not secrets):
 
@@ -89,6 +106,7 @@ Repository variables (public facts and gates, not secrets):
 | `PERF_NIGHTLY_ENABLED` | off | Enables the schedule. A manual dispatch runs regardless. |
 | `PERF_APP_REPOSITORY_URL` | the MonetizeKit application repo | Where compare and commit links point |
 | `PERF_SITE_URL` | `https://<owner>.github.io/<repo>` | Canonical origin of the published site; change it only for a custom domain (see below) |
+| `SLACK_PERF_CHANNEL` | `#performance` | Where the bot token posts; ignored when a webhook is set |
 
 ## Turning it on
 

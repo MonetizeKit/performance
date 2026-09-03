@@ -10,7 +10,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSlackMessage,
+  DEFAULT_SLACK_CHANNEL,
+  describeSlackDelivery,
   postSlackReport,
+  resolveSlackDelivery,
   resolveSlackWebhookUrl,
   slackHeadline,
   type FetchLike,
@@ -288,6 +291,79 @@ describe("postSlackReport", () => {
 
     expect(result).toMatchObject({ delivered: false, reason: "delivery_failed" });
     expect(result.detail).toContain("ECONNREFUSED");
+  });
+});
+
+describe("postSlackReport via a bot token", () => {
+  const delivery = { kind: "bot" as const, token: "xoxb-test", channel: "#performance" };
+
+  it("posts to chat.postMessage with the token and channel", async () => {
+    const calls: { url: string; headers: Record<string, string>; body: string }[] = [];
+    const fetchFn: FetchLike = async (url, init) => {
+      calls.push({ url, headers: init.headers, body: init.body });
+      return { ok: true, status: 200, text: async () => '{"ok":true,"ts":"1.0"}' };
+    };
+
+    const result = await postSlackReport(build(PASSED), { delivery, fetchFn });
+
+    expect(result.delivered).toBe(true);
+    expect(calls[0]!.url).toBe("https://slack.com/api/chat.postMessage");
+    expect(calls[0]!.headers.authorization).toBe("Bearer xoxb-test");
+    const body = JSON.parse(calls[0]!.body);
+    expect(body.channel).toBe("#performance");
+    expect(body).toHaveProperty("blocks");
+    expect(body.unfurl_links).toBe(false);
+  });
+
+  it("reads the Web API's ok:false as a failure even though the HTTP status is 200", async () => {
+    const fetchFn: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      text: async () => '{"ok":false,"error":"channel_not_found"}',
+    });
+
+    const result = await postSlackReport(build(PASSED), { delivery, fetchFn });
+
+    expect(result).toMatchObject({
+      delivered: false,
+      reason: "delivery_failed",
+      status: 200,
+      detail: "channel_not_found",
+    });
+  });
+});
+
+describe("resolveSlackDelivery", () => {
+  it("prefers the webhook when both are set", () => {
+    expect(
+      resolveSlackDelivery({
+        SLACK_PERF_WEBHOOK_URL: "https://hooks.slack.example/x",
+        SLACK_BOT_TOKEN: "xoxb-1",
+      }),
+    ).toEqual({ kind: "webhook", url: "https://hooks.slack.example/x" });
+  });
+
+  it("falls back to the bot token, posting to #performance unless told otherwise", () => {
+    expect(resolveSlackDelivery({ SLACK_BOT_TOKEN: " xoxb-1 " })).toEqual({
+      kind: "bot",
+      token: "xoxb-1",
+      channel: DEFAULT_SLACK_CHANNEL,
+    });
+    expect(
+      resolveSlackDelivery({ SLACK_BOT_TOKEN: "xoxb-1", SLACK_PERF_CHANNEL: "#perf-nightly" }),
+    ).toEqual({ kind: "bot", token: "xoxb-1", channel: "#perf-nightly" });
+  });
+
+  it("is null when nothing is configured", () => {
+    expect(resolveSlackDelivery({})).toBeNull();
+    expect(resolveSlackDelivery({ SLACK_BOT_TOKEN: "  " })).toBeNull();
+  });
+
+  it("names the route for logs", () => {
+    expect(describeSlackDelivery({ kind: "webhook", url: "https://x" })).toBe("incoming webhook");
+    expect(describeSlackDelivery({ kind: "bot", token: "t", channel: "#performance" })).toBe(
+      "bot token → #performance",
+    );
   });
 });
 
