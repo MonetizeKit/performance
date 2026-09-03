@@ -13,3 +13,15 @@ updates:
     groups:
       tooling:
         patterns: ["*"]
+    ignore:
+      # typescript-eslint declares `typescript: ">=4.8.4 <6.1.0"` and refuses to
+      # run against TypeScript 7 ("typescript-eslint does not support TS 7.0"),
+      # so a major bump of the compiler breaks `lint` until the linter catches
+      # up. Move it by hand, with the linter, when that happens.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # The type definitions must track the runtime in `.node-version`, not the
+      # newest Node release: types for a newer major would type-check code that
+      # calls APIs the pinned runtime does not have.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
