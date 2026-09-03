@@ -96,6 +96,7 @@ perf:run  →  perf:collect  →  perf:analyze  →  perf:persist  →  perf:rep
 
 | Command | What it does |
 |---|---|
+| `pnpm perf:env` | In CI only: read the target's facts (origin, key, dataset version, bypass, report channels) from Phase.dev into `$GITHUB_ENV`, masked, with the mirrored GitHub secrets as fallback. |
 | `pnpm perf:run` | Preflight the target and its rate limit, then run k6. Writes the raw summary and a run context. |
 | `pnpm perf:collect` | Normalize the k6 summary into a Run Document. |
 | `pnpm perf:analyze` | Compare against the baseline, attribute the build range, decide the verdict. |

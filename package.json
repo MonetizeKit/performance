@@ -13,6 +13,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "perf:env": "pnpm --filter @monetizekit/perf-pipeline run perf:env",
     "perf:run": "pnpm --filter @monetizekit/perf-pipeline run perf:run",
     "perf:collect": "pnpm --filter @monetizekit/perf-pipeline run perf:collect",
     "perf:analyze": "pnpm --filter @monetizekit/perf-pipeline run perf:analyze",
