@@ -11,11 +11,15 @@ name: Publish results
 # the data it describes.
 #
 # The branch is orphan and machine-written; it contains no source, no
-# configuration and no secrets, which is what makes publishing it safe.
+# configuration and no secrets, which is what makes publishing it safe. It is
+# also why this cannot run `on: push` to that branch: a push runs the workflow
+# file found in the pushed commit, and `perf-data` deliberately has none (and a
+# push made with the workflow token would not start a run anyway). So the
+# nightly calls this workflow after it has persisted, and a manual dispatch
+# republishes whatever the branch holds.
 
 on:
-  push:
-    branches: [perf-data]
+  workflow_call:
   workflow_dispatch:
 
 # Read the data branch, write a Pages deployment, and nothing else.
@@ -24,16 +28,16 @@ permissions:
   pages: write
   id-token: write
 
-# Never two deployments at once, and a newer result supersedes an older one
-# still waiting to go out.
-concurrency:
-  group: perf-pages
-  cancel-in-progress: true
-
 jobs:
   publish:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
+    # Never two deployments at once, and a newer result supersedes an older one
+    # still waiting to go out. Set on the job, where it holds whether this
+    # workflow was dispatched or called.
+    concurrency:
+      group: perf-pages
+      cancel-in-progress: true
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}

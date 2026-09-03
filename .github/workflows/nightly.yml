@@ -30,10 +30,6 @@ on:
         type: boolean
         default: false
 
-# `contents: write` is for pushing the perf-data branch; nothing else is written.
-permissions:
-  contents: write
-
 # Two runs at once would share the tenant's rate budget and measure each other.
 # A queued run waits rather than being cancelled: a dispatch during the nightly
 # should still happen, just afterwards.
@@ -46,6 +42,13 @@ jobs:
     name: Measure, baseline and report
     if: github.event_name == 'workflow_dispatch' || vars.PERF_NIGHTLY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    # `contents: write` is for pushing the perf-data branch; nothing else is written.
+    permissions:
+      contents: write
+    outputs:
+      # Whether a record reached perf-data, so the site is redeployed only when
+      # there is something new to serve — and never before the branch exists.
+      published: ${{ steps.persist.outcome == 'success' }}
     # The k6 workload alone is ~71 minutes (seven authenticated scenarios at ten
     # minutes each, sequential); the rest is setup, collection and reporting.
     timeout-minutes: 120
@@ -124,8 +127,9 @@ jobs:
 
       # Also renders the trends page and the run's permalink page next to the
       # index they read, so the data and the view of it are published in the
-      # same commit. Pushing perf-data triggers the Pages deployment.
+      # same commit. The `publish` job below then deploys the branch.
       - name: Persist to the perf-data branch
+        id: persist
         if: ${{ !inputs.dry_run }}
         env:
           PERF_GIT_AUTHOR_NAME: monetizekit-bot
@@ -165,3 +169,19 @@ jobs:
             .perf-data/run
           if-no-files-found: warn
           retention-days: 30
+
+  # The site is deployed from here rather than by a push trigger on perf-data:
+  # that branch carries no workflow file, and a push made with the workflow
+  # token starts no run. Runs whenever a record was persisted, including after a
+  # failed report — `--fail-on-regression` reddens `measure` only after the
+  # record is already on the branch, and a regression is exactly the result
+  # that should be visible.
+  publish:
+    name: Publish
+    needs: measure
+    if: ${{ !cancelled() && needs.measure.outputs.published == 'true' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

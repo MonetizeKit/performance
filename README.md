@@ -28,8 +28,8 @@ packages/
   pipeline/         run → collect → analyze → persist → report (Node, TypeScript)
 docs/methodology.md
 .github/workflows/
-  nightly.yml       04:00 UTC: measure, baseline, publish, report
-  pages.yml         serve the perf-data branch as the site, on every push to it
+  nightly.yml       04:00 UTC: measure, baseline, persist, report, then publish
+  pages.yml         deploy the perf-data branch as the site; called by the nightly
   ci.yml            typecheck, lint, unit tests, k6 compile check
 ```
 
@@ -113,20 +113,26 @@ Repository variables (public facts and gates, not secrets):
 1. Configure the `Delivery` environment secrets above.
 2. Dispatch **Nightly performance run** with `smoke: true` and `dry_run: true`.
    It measures for two minutes and publishes nothing; read the artifact.
-3. Dispatch again with `dry_run: false`. The first push to `perf-data` deploys
-   the site.
+3. Dispatch again with `dry_run: false`. The first record creates `perf-data`
+   and the run's `publish` job deploys the site.
 4. Set `PERF_NIGHTLY_ENABLED=true`.
 5. Wait five nights. Verdicts read `baseline-forming` until five comparable runs
    exist; the sixth is the first that can call a regression.
 
 ### GitHub Pages
 
-The site is served from the `perf-data` branch by `.github/workflows/pages.yml`,
-which deploys with `actions/deploy-pages` rather than from a branch, so Pages
-must be set to build from **GitHub Actions**. The workflow does this itself on
-first use (`actions/configure-pages` with `enablement: true`). If that step is
-ever refused — the workflow token lacks the permission on some plans — turn it on
-once by hand, either way below, and the next `perf-data` push publishes:
+The site is the `perf-data` branch, deployed by `.github/workflows/pages.yml`
+with `actions/deploy-pages` rather than served from a branch, so Pages must be
+set to build from **GitHub Actions**. The nightly calls that workflow as its
+last job, after `perf:persist` has pushed the record; it cannot run on a push to
+`perf-data`, because that branch holds only data (no workflow file) and a push
+made with the workflow token starts no run anyway. Dispatch **Publish results**
+by hand to redeploy whatever the branch holds.
+
+The workflow turns Pages on itself on first use (`actions/configure-pages` with
+`enablement: true`). If that step is ever refused — the workflow token lacks the
+permission on some plans — turn it on once by hand, either way below, and the
+next nightly publishes:
 
 - **Settings → Pages → Build and deployment → Source: GitHub Actions.** Nothing
   else to pick; there is no branch or folder when the source is Actions.
@@ -135,6 +141,13 @@ once by hand, either way below, and the next `perf-data` push publishes:
   ```sh
   gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow
   ```
+
+Enabling Pages creates a `github-pages` environment whose deployment branch
+policy admits only the default branch. That is enough here — the nightly runs
+from `main` — but if you dispatch or call the deployment from another branch,
+allow it first (Settings → Environments → github-pages → Deployment branches, or
+`gh api -X POST repos/<owner>/<repo>/environments/github-pages/deployment-branch-policies -f name=<branch> -f type=branch`),
+or the deploy step fails with "not allowed to deploy to github-pages".
 
 Either leaves the site at `https://<owner>.github.io/<repo>/`, which is what
 `PERF_SITE_URL` defaults to. A run's permalink is `<site>/run/<runId>.html`.
