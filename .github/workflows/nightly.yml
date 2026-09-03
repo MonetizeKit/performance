@@ -78,7 +78,7 @@ jobs:
     steps:
       # Shallow is enough: attribution links into the application repository
       # rather than reading history here.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
 
