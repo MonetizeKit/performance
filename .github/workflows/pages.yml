@@ -1,0 +1,69 @@
+name: Publish results
+
+# Serves the `perf-data` branch as this repository's GitHub Pages site, so every
+# run has a public URL that can be cited in a post, a deck or a customer
+# conversation and still resolve years later.
+#
+# The site is the store: `index.html` is the trends dashboard, `run/<runId>.html`
+# is one page per measurement, `index.ndjson` and `runs/**.json` are the raw
+# records behind them. Nothing is generated here — `perf:persist` already wrote
+# all of it into the commit this deploys — so the page can never disagree with
+# the data it describes.
+#
+# The branch is orphan and machine-written; it contains no source, no
+# configuration and no secrets, which is what makes publishing it safe.
+
+on:
+  push:
+    branches: [perf-data]
+  workflow_dispatch:
+
+# Read the data branch, write a Pages deployment, and nothing else.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never two deployments at once, and a newer result supersedes an older one
+# still waiting to go out.
+concurrency:
+  group: perf-pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: perf-data
+          # Only the current state is published; the history of the history is
+          # not needed to serve it.
+          fetch-depth: 1
+
+      # Without this a static host with Jekyll enabled would refuse to serve
+      # anything under a directory it considers special, and silently drop it.
+      - name: Ensure .nojekyll
+        run: touch .nojekyll
+
+      - name: Report what is being published
+        run: |
+          echo "Runs recorded: $(wc -l < index.ndjson 2>/dev/null || echo 0)"
+          echo "Permalink pages: $(find run -name '*.html' 2>/dev/null | wc -l)"
+
+      # `enablement` turns Pages on for the repository the first time, with the
+      # source set to Actions, so publishing needs no click in Settings.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

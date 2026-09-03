@@ -1,0 +1,27 @@
+{
+  "name": "monetizekit-performance",
+  "private": true,
+  "version": "0.0.0",
+  "description": "MonetizeKit's public performance harness: nightly k6 workload, immutable run records, baselines and attribution.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MonetizeKit/performance.git"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "perf:run": "pnpm --filter @monetizekit/perf-pipeline run perf:run",
+    "perf:collect": "pnpm --filter @monetizekit/perf-pipeline run perf:collect",
+    "perf:analyze": "pnpm --filter @monetizekit/perf-pipeline run perf:analyze",
+    "perf:persist": "pnpm --filter @monetizekit/perf-pipeline run perf:persist",
+    "perf:dashboard": "pnpm --filter @monetizekit/perf-pipeline run perf:dashboard",
+    "perf:report": "pnpm --filter @monetizekit/perf-pipeline run perf:report",
+    "test": "pnpm -r --if-present run test",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "pnpm -r --if-present run lint",
+    "check": "pnpm typecheck && pnpm lint && pnpm test"
+  }
+}

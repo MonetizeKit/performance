@@ -1,0 +1,10 @@
+{
+  "name": "@monetizekit/perf-api-workload",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The k6 workload: scenario catalog and entrypoint exercising the MonetizeKit public API.",
+  "license": "MIT",
+  "scripts": {
+    "lint": "node --check main.js && node -e \"for (const f of ['scenarios.json','scenarios.smoke.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))\""
+  }
+}

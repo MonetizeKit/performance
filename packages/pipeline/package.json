@@ -1,0 +1,32 @@
+{
+  "name": "@monetizekit/perf-pipeline",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Runs the k6 workload, turns its summary into an immutable Run Document, baselines it against history, publishes it, and reports.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "perf:run": "tsx src/run.ts",
+    "perf:collect": "tsx src/collect.ts",
+    "perf:analyze": "tsx src/analyze.ts",
+    "perf:persist": "tsx src/persist.ts",
+    "perf:dashboard": "tsx src/dashboard.ts",
+    "perf:report": "tsx src/report.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22",
+    "eslint": "^10.5.0",
+    "globals": "^17.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "5.7.3",
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^4.0.18"
+  }
+}

@@ -1,0 +1,59 @@
+name: CI
+
+# The pipeline is what turns a k6 summary into a number someone will quote, so
+# it is held to the same standard as application code: typed, linted, tested.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      # The k6 script is executed by k6's own runtime, not Node, so the only
+      # honest syntax check is k6's. `--paused` compiles and initialises without
+      # offering any load; the catalog is opened as the real run would open it.
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: "1.4.0"
+
+      - name: k6 entrypoint compiles against both catalogs
+        run: |
+          for catalog in scenarios.json scenarios.smoke.json; do
+            PERF_SCENARIOS="$PWD/packages/api-workload/$catalog" \
+            PERF_BASE_URL=https://ci.invalid PERF_API_KEY=mk_test_ci \
+              k6 inspect packages/api-workload/main.js > /dev/null
+          done

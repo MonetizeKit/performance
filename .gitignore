@@ -1,0 +1,11 @@
+node_modules/
+
+# Scratch output of one run: k6 summary, run context, Run Document, report.
+.perf/
+
+# Worktree of the perf-data branch; the branch itself is the record.
+.perf-data/
+
+.env
+.env.*
+!.env.example
