@@ -57,7 +57,9 @@ jobs:
       # Where and as whom to measure. The `DEMO_*` names are what the application
       # repository's seeder publishes; `PERF_*` override them when a separate
       # target is wanted.
-      PERF_BASE_URL: ${{ secrets.PERF_BASE_URL || secrets.DEMO_TARGET_BASE_URL || secrets.APP_BASE_URL }}
+      # `NEXT_PUBLIC_APP_URL` is the application's own public origin, present in
+      # every Phase environment, so a freshly synced stage needs no extra secret.
+      PERF_BASE_URL: ${{ secrets.PERF_BASE_URL || secrets.DEMO_TARGET_BASE_URL || secrets.APP_BASE_URL || secrets.NEXT_PUBLIC_APP_URL }}
       PERF_API_KEY: ${{ secrets.PERF_API_KEY || secrets.DEMO_WORKSPACE_API_KEY }}
       PERF_DATASET_VERSION: ${{ secrets.PERF_DATASET_VERSION || secrets.DEMO_DATASET_VERSION }}
       # A stage behind Vercel Deployment Protection answers every request with a

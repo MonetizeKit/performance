@@ -72,7 +72,7 @@ a fork sets them directly). Secrets:
 
 | Secret | Purpose |
 |---|---|
-| `PERF_BASE_URL` (or `DEMO_TARGET_BASE_URL`, or `APP_BASE_URL`) | Origin of the deployment to measure |
+| `PERF_BASE_URL` (or `DEMO_TARGET_BASE_URL`, `APP_BASE_URL`, `NEXT_PUBLIC_APP_URL`, first set wins) | Origin of the deployment to measure |
 | `PERF_API_KEY` (or `DEMO_WORKSPACE_API_KEY`) | Secret key of the workspace under test |
 | `PERF_DATASET_VERSION` (or `DEMO_DATASET_VERSION`) | Version of the seeded dataset; a comparability key. Optional |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | Deployment Protection bypass, for a target behind Vercel's login page. Optional |
@@ -88,7 +88,7 @@ Repository variables (public facts and gates, not secrets):
 |---|---|---|
 | `PERF_NIGHTLY_ENABLED` | off | Enables the schedule. A manual dispatch runs regardless. |
 | `PERF_APP_REPOSITORY_URL` | the MonetizeKit application repo | Where compare and commit links point |
-| `PERF_SITE_URL` | `https://<owner>.github.io/<repo>` | Only for a custom domain |
+| `PERF_SITE_URL` | `https://<owner>.github.io/<repo>` | Canonical origin of the published site; change it only for a custom domain (see below) |
 
 ## Turning it on
 
@@ -96,10 +96,51 @@ Repository variables (public facts and gates, not secrets):
 2. Dispatch **Nightly performance run** with `smoke: true` and `dry_run: true`.
    It measures for two minutes and publishes nothing; read the artifact.
 3. Dispatch again with `dry_run: false`. The first push to `perf-data` deploys
-   the site (the Pages workflow enables Pages on first use).
+   the site.
 4. Set `PERF_NIGHTLY_ENABLED=true`.
 5. Wait five nights. Verdicts read `baseline-forming` until five comparable runs
    exist; the sixth is the first that can call a regression.
+
+### GitHub Pages
+
+The site is served from the `perf-data` branch by `.github/workflows/pages.yml`,
+which deploys with `actions/deploy-pages` rather than from a branch, so Pages
+must be set to build from **GitHub Actions**. The workflow does this itself on
+first use (`actions/configure-pages` with `enablement: true`). If that step is
+ever refused — the workflow token lacks the permission on some plans — turn it on
+once by hand, either way below, and the next `perf-data` push publishes:
+
+- **Settings → Pages → Build and deployment → Source: GitHub Actions.** Nothing
+  else to pick; there is no branch or folder when the source is Actions.
+- Or with the API, using a token that administers the repository:
+
+  ```sh
+  gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow
+  ```
+
+Either leaves the site at `https://<owner>.github.io/<repo>/`, which is what
+`PERF_SITE_URL` defaults to. A run's permalink is `<site>/run/<runId>.html`.
+
+### Custom domain (optional)
+
+Nothing in the harness depends on the address; a custom domain only makes the
+permalinks yours. When wanted:
+
+1. **DNS.** For a subdomain such as `perf.example.com`, add a `CNAME` record
+   pointing at `<owner>.github.io` (no repository path). For an apex domain use
+   `A`/`AAAA` records to GitHub Pages' published addresses instead.
+2. **Verify the domain on the organisation** (Organisation settings → Pages →
+   Add a domain) so no other account can claim it. GitHub gives you a `TXT`
+   record to add; wait for it to verify.
+3. **Attach it to the repository:** Settings → Pages → Custom domain, or
+   `gh api -X PUT repos/<owner>/<repo>/pages -f cname=perf.example.com`. Tick
+   **Enforce HTTPS** once the certificate has been issued (minutes to an hour).
+   Because the site is deployed from Actions, do not commit a `CNAME` file to
+   `perf-data`; the setting lives in Pages configuration.
+4. **Set the variable** `PERF_SITE_URL=https://perf.example.com` so the run
+   pages' canonical links, the Slack post and the email cite the new origin.
+   Existing permalinks under `<owner>.github.io/<repo>/` keep resolving: GitHub
+   redirects them to the custom domain.
 
 ## Development
 
