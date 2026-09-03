@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Batched: a measurement pipeline should move its dependencies deliberately
+    # and rarely, and each move is a confounder the run record has to explain.
+    groups:
+      tooling:
+        patterns: ["*"]

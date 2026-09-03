@@ -1,0 +1,157 @@
+name: Nightly performance run
+
+# Measures the MonetizeKit public API once a night against a seeded showcase
+# tenant, records an immutable Run Document on the `perf-data` branch, judges it
+# against the rolling baseline, and reports to Slack and email.
+#
+# Runs at 04:00 UTC: the tenant's own refresh finishes well before then, so the
+# workload never shares its per-key rate budget with the seeder. (The refresh is
+# the application repository's job; see docs/methodology.md, "The tenant".)
+#
+# Gated on the PERF_NIGHTLY_ENABLED repository variable so that forking this
+# repository does not start load-testing anything. A manual dispatch ignores the
+# gate, because someone asked.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment label recorded on the run (runs are only comparable within one)
+        type: string
+        default: delivery
+      smoke:
+        description: Run the two-minute smoke catalog instead of the nightly workload
+        type: boolean
+        default: false
+      dry_run:
+        description: Measure and report, but publish nothing to perf-data
+        type: boolean
+        default: false
+
+# `contents: write` is for pushing the perf-data branch; nothing else is written.
+permissions:
+  contents: write
+
+# Two runs at once would share the tenant's rate budget and measure each other.
+# A queued run waits rather than being cancelled: a dispatch during the nightly
+# should still happen, just afterwards.
+concurrency:
+  group: perf-nightly
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Measure, baseline and report
+    if: github.event_name == 'workflow_dispatch' || vars.PERF_NIGHTLY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    # The k6 workload alone is ~71 minutes (seven authenticated scenarios at ten
+    # minutes each, sequential); the rest is setup, collection and reporting.
+    timeout-minutes: 120
+    # The GitHub Environment that Phase.dev syncs the target's secrets into.
+    environment:
+      name: Delivery
+    env:
+      PERF_ENVIRONMENT: ${{ inputs.environment || 'delivery' }}
+      # Where and as whom to measure. The `DEMO_*` names are what the application
+      # repository's seeder publishes; `PERF_*` override them when a separate
+      # target is wanted.
+      PERF_BASE_URL: ${{ secrets.PERF_BASE_URL || secrets.DEMO_TARGET_BASE_URL || secrets.APP_BASE_URL }}
+      PERF_API_KEY: ${{ secrets.PERF_API_KEY || secrets.DEMO_WORKSPACE_API_KEY }}
+      PERF_DATASET_VERSION: ${{ secrets.PERF_DATASET_VERSION || secrets.DEMO_DATASET_VERSION }}
+      # The application under test, for compare and commit links. A variable, not
+      # a secret: it is a public address.
+      PERF_APP_REPOSITORY_URL: ${{ vars.PERF_APP_REPOSITORY_URL || 'https://github.com/MonetizeKit/app-monetizekit-monorepo' }}
+      # Where results are served. Derived from this repository's Pages address
+      # when unset; set it only for a custom domain.
+      PERF_SITE_URL: ${{ vars.PERF_SITE_URL }}
+      # Slack and email are independent channels: losing one is reported, losing
+      # both is an error. Configuring either is enough.
+      SLACK_PERF_WEBHOOK_URL: ${{ secrets.SLACK_PERF_WEBHOOK_URL }}
+      PERF_REPORT_RECIPIENTS: ${{ secrets.PERF_REPORT_RECIPIENTS }}
+      SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+      SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+      # The trigger decides whether this run may form part of a baseline, so it
+      # is recorded rather than inferred from the runner.
+      PERF_TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'dispatch' }}
+    steps:
+      # Shallow is enough: attribution links into the application repository
+      # rather than reading history here.
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Pinned: a k6 upgrade changes how latency is measured, and an unpinned
+      # one would arrive as an unexplained step in every scenario at once. The
+      # version is recorded in the Run Document so a deliberate upgrade is
+      # attributable.
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: "1.4.0"
+
+      # `perf:run` preflights the target itself — is it serving, does the key
+      # work, does the workload fit the key's rate limit — and refuses to offer
+      # load if not. A tenant that needs re-keying is the application
+      # repository's job; this workflow reports the refusal rather than healing it.
+      - name: Run k6 scenarios
+        run: pnpm perf:run ${{ inputs.smoke && '--smoke' || '' }}
+
+      - name: Collect the Run Document
+        run: pnpm perf:collect
+
+      - name: Baseline and attribute
+        run: pnpm perf:analyze
+
+      # Also renders the trends page and the run's permalink page next to the
+      # index they read, so the data and the view of it are published in the
+      # same commit. Pushing perf-data triggers the Pages deployment.
+      - name: Persist to the perf-data branch
+        if: ${{ !inputs.dry_run }}
+        env:
+          PERF_GIT_AUTHOR_NAME: monetizekit-bot
+          PERF_GIT_AUTHOR_EMAIL: bot@monetizekit.app
+        run: pnpm perf:persist
+
+      # A dry run publishes nothing, so it renders the page itself rather than
+      # inheriting the one `perf:persist` would have written.
+      - name: Render the trends page
+        if: ${{ inputs.dry_run }}
+        run: pnpm perf:dashboard --out .perf-data/index.html
+
+      # Runs even when an earlier step failed, so a run that died mid-flight is
+      # reported rather than silently absent. `--fail-on-regression` then makes
+      # the job red, after the report is away.
+      - name: Report to Slack and email
+        if: always() && hashFiles('.perf/run.json') != ''
+        run: |
+          pnpm perf:report \
+            --out .perf/report.html \
+            --no-fetch \
+            --fail-on-regression \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      # Everything the run produced, whether or not it was published, so a
+      # failure can be read without reproducing it.
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-${{ github.run_id }}
+          path: |
+            .perf/run.json
+            .perf/report.html
+            .perf/summary.json
+            .perf-data/index.html
+            .perf-data/run
+          if-no-files-found: warn
+          retention-days: 30

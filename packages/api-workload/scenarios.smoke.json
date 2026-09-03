@@ -1,0 +1,76 @@
+{
+  "$comment": [
+    "A two-minute version of scenarios.json, for exercising the pipeline rather",
+    "than for measuring anything.",
+    "",
+    "The nightly catalog takes about fifteen minutes, which is the right cost for",
+    "a measurement and much too high a cost for checking that collect, analyze,",
+    "persist, report and the dashboard still agree with each other. Use it with",
+    "`pnpm perf:run --catalog packages/api-workload/scenarios.smoke.json`.",
+    "",
+    "`workloadVersion` is deliberately unlike the nightly's. Comparability is",
+    "keyed on it, so smoke runs form their own baseline population and can never",
+    "be mistaken for — or averaged into — a real one, however they are labelled.",
+    "",
+    "The sample counts here are far too small for a percentile to mean anything.",
+    "That is the point: these runs prove the plumbing, and the SLOs are set wide",
+    "enough that a slow machine does not produce a red herring."
+  ],
+  "workloadVersion": "smoke-w1",
+  "settleSeconds": 2,
+  "requestsPerMinuteBudget": 100,
+  "scenarios": [
+    {
+      "name": "platform-baseline",
+      "description": "Unauthenticated build-info read.",
+      "method": "GET",
+      "authenticated": false,
+      "rate": 5,
+      "timeUnit": "1s",
+      "duration": "10s",
+      "preAllocatedVUs": 5,
+      "sloP95Ms": 2000,
+      "sloErrorRate": 0.01,
+      "writes": false
+    },
+    {
+      "name": "entitlement-check",
+      "description": "Single feature check on the customer's hot path.",
+      "method": "GET",
+      "authenticated": true,
+      "rate": 1,
+      "timeUnit": "1s",
+      "duration": "20s",
+      "preAllocatedVUs": 5,
+      "sloP95Ms": 2000,
+      "sloErrorRate": 0.01,
+      "writes": false
+    },
+    {
+      "name": "catalog-reads",
+      "description": "Published products and plans, the pricing-page path.",
+      "method": "GET",
+      "authenticated": true,
+      "rate": 1,
+      "timeUnit": "1s",
+      "duration": "20s",
+      "preAllocatedVUs": 5,
+      "sloP95Ms": 2000,
+      "sloErrorRate": 0.01,
+      "writes": false
+    },
+    {
+      "name": "usage-ingest",
+      "description": "Single metered event stamped at ingest time.",
+      "method": "POST",
+      "authenticated": true,
+      "rate": 1,
+      "timeUnit": "1s",
+      "duration": "20s",
+      "preAllocatedVUs": 5,
+      "sloP95Ms": 2000,
+      "sloErrorRate": 0.01,
+      "writes": true
+    }
+  ]
+}
