@@ -75,6 +75,7 @@ a fork sets them directly). Secrets:
 | `PERF_BASE_URL` (or `DEMO_TARGET_BASE_URL`, or `APP_BASE_URL`) | Origin of the deployment to measure |
 | `PERF_API_KEY` (or `DEMO_WORKSPACE_API_KEY`) | Secret key of the workspace under test |
 | `PERF_DATASET_VERSION` (or `DEMO_DATASET_VERSION`) | Version of the seeded dataset; a comparability key. Optional |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Deployment Protection bypass, for a target behind Vercel's login page. Optional |
 | `SLACK_PERF_WEBHOOK_URL` | Slack incoming webhook for the nightly post |
 | `PERF_REPORT_RECIPIENTS`, `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` | Email delivery |
 
