@@ -58,8 +58,9 @@ pnpm perf:report --dry-run --out .perf/report.html
 Drop `--smoke` for the full seventy-minute nightly workload. Every command
 prints progress on stderr and a JSON result on stdout, and `--help` on any of
 them lists its flags. `perf:run` preflights the target first and refuses to
-offer load if the key is rejected or the workload would exceed the key's rate
-limit.
+offer load if the key is rejected, the workload would exceed the key's rate
+limit, or another client is already spending that limit (`--allow-shared-key`
+overrides, and the run's notes say so).
 
 Write scenarios create a probe customer for the run and archive it afterwards;
 the usage events they record are not deleted, because on the platform they are
