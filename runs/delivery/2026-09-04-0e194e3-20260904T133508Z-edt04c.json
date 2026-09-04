@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 2,
+  "runId": "20260904T133508Z-edt04c",
+  "timestamp": "2026-09-04T13:35:08.285Z",
+  "status": "regressed",
+  "trigger": "dispatch",
+  "environment": "delivery",
+  "baseUrl": "https://app.monetizekit.delivery",
+  "appSha": "0e194e320aa3888d9ca4068e3c60cf7ac0055702",
+  "deploymentId": "pdx1::iad1::ksjln-1788528913540-7a88926d3d51",
+  "datasetVersion": "v2",
+  "workloadVersion": "w2",
+  "rateLimitPerMinute": 100,
+  "k6Version": "1.4.0",
+  "durationMs": 4302522,
+  "thresholdsBreached": true,
+  "scenarios": {
+    "platform-baseline": {
+      "avg": 198.1015351866667,
+      "min": 169.23716,
+      "p50": 187.162057,
+      "p90": 236.3226514,
+      "p95": 245.49150050000003,
+      "p99": 339.2677454199999,
+      "max": 449.553818,
+      "requests": 300,
+      "rps": 10,
+      "errorRate": 0,
+      "sloP95Ms": 400,
+      "sloErrorRate": 0.001,
+      "sloPass": true
+    },
+    "entitlement-check": {
+      "avg": 115.26155376705478,
+      "min": 95.540884,
+      "p50": 107.422156,
+      "p90": 121.943112,
+      "p95": 135.57571,
+      "p99": 188.988062,
+      "max": 1599.349566,
+      "requests": 601,
+      "rps": 1.002,
+      "errorRate": 0,
+      "sloP95Ms": 120,
+      "sloErrorRate": 0.001,
+      "sloPass": false
+    },
+    "entitlement-batch": {
+      "avg": 892.4967520382694,
+      "min": 804.83991,
+      "p50": 892.894789,
+      "p90": 929.163054,
+      "p95": 967.909356,
+      "p99": 1123.552827,
+      "max": 1767.344173,
+      "requests": 601,
+      "rps": 1.002,
+      "errorRate": 0,
+      "sloP95Ms": 200,
+      "sloErrorRate": 0.001,
+      "sloPass": false
+    },
+    "customer-reads": {
+      "avg": 560.9512240016641,
+      "min": 519.14042,
+      "p50": 547.010025,
+      "p90": 601.360392,
+      "p95": 623.655269,
+      "p99": 803.67206,
+      "max": 1296.413491,
+      "requests": 601,
+      "rps": 1.002,
+      "errorRate": 0,
+      "sloP95Ms": 250,
+      "sloErrorRate": 0.001,
+      "sloPass": false
+    },
+    "catalog-reads": {
+      "avg": 424.0731394766671,
+      "min": 387.918002,
+      "p50": 411.739649,
+      "p90": 461.9851232,
+      "p95": 483.6143237499999,
+      "p99": 671.46056144,
+      "max": 746.48933,
+      "requests": 600,
+      "rps": 1,
+      "errorRate": 0,
+      "sloP95Ms": 200,
+      "sloErrorRate": 0.001,
+      "sloPass": false
+    },
+    "usage-ingest": {
+      "avg": 651.2535180133103,
+      "min": 602.904901,
+      "p50": 635.447718,
+      "p90": 702.173157,
+      "p95": 725.153586,
+      "p99": 882.755579,
+      "max": 941.131605,
+      "requests": 601,
+      "rps": 1.002,
+      "errorRate": 0,
+      "sloP95Ms": 150,
+      "sloErrorRate": 0.001,
+      "sloPass": false
+    },
+    "usage-ingest-backdated": {
+      "avg": 664.099681981697,
+      "min": 602.867387,
+      "p50": 656.868819,
+      "p90": 712.223197,
+      "p95": 745.660368,
+      "p99": 899.309871,
+      "max": 990.726443,
+      "requests": 601,
+      "rps": 1.002,
+      "errorRate": 0,
+      "sloP95Ms": 150,
+      "sloErrorRate": 0.001,
+      "sloPass": false
+    },
+    "usage-ingest-batch": {
+      "avg": 59990.55300437037,
+      "min": 59796.490362,
+      "p50": 60000.384002,
+      "p90": 60000.914899,
+      "p95": 60000.9822134,
+      "p99": 60001.0857834,
+      "max": 60001.119391,
+      "requests": 27,
+      "rps": 0.045,
+      "errorRate": 1,
+      "sloP95Ms": 1500,
+      "sloErrorRate": 0.001,
+      "sloPass": false
+    }
+  },
+  "baseline": {
+    "comparableRuns": 0,
+    "baselineRuns": 0,
+    "forming": true,
+    "regressionRatio": 1.2,
+    "scenarios": [
+      {
+        "scenario": "platform-baseline",
+        "p95": 245.49150050000003,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 400,
+        "sloPass": true,
+        "verdict": "baseline-forming"
+      },
+      {
+        "scenario": "entitlement-check",
+        "p95": 135.57571,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 120,
+        "sloPass": false,
+        "verdict": "slo-breach"
+      },
+      {
+        "scenario": "entitlement-batch",
+        "p95": 967.909356,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 200,
+        "sloPass": false,
+        "verdict": "slo-breach"
+      },
+      {
+        "scenario": "customer-reads",
+        "p95": 623.655269,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 250,
+        "sloPass": false,
+        "verdict": "slo-breach"
+      },
+      {
+        "scenario": "catalog-reads",
+        "p95": 483.6143237499999,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 200,
+        "sloPass": false,
+        "verdict": "slo-breach"
+      },
+      {
+        "scenario": "usage-ingest",
+        "p95": 725.153586,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 150,
+        "sloPass": false,
+        "verdict": "slo-breach"
+      },
+      {
+        "scenario": "usage-ingest-backdated",
+        "p95": 745.660368,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 150,
+        "sloPass": false,
+        "verdict": "slo-breach"
+      },
+      {
+        "scenario": "usage-ingest-batch",
+        "p95": 60000.9822134,
+        "baselineP95": null,
+        "ratio": null,
+        "sloP95Ms": 1500,
+        "sloPass": false,
+        "verdict": "slo-breach"
+      }
+    ]
+  },
+  "changeSet": {
+    "detail": "unavailable",
+    "previousAppSha": null,
+    "commits": [],
+    "migrations": [],
+    "dependencies": [],
+    "compareUrl": null,
+    "truncated": false,
+    "unavailableReason": "no earlier run recorded a build commit to compare against"
+  },
+  "notes": [
+    "baseline forming: 0 comparable run(s) so far, so verdicts are informational until there are enough to take a median of.",
+    "change set unavailable — no earlier run recorded a build commit to compare against"
+  ]
+}
