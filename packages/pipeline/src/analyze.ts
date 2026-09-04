@@ -15,6 +15,7 @@ import { parseFlags, progress, runCli } from "./lib/cli";
 import { DEFAULT_DOCUMENT, DEFAULT_STORE, display, userPath, userPathOr } from "./lib/paths";
 import type { RunDocument } from "./lib/run-document";
 import { appRepositoryUrl, checkoutStore, createRunner, PerfStore } from "./lib/store";
+import { describeSlo } from "./lib/verdict";
 
 const HELP = `
 pnpm perf:analyze — add baseline verdicts and change-set attribution to a run.
@@ -93,7 +94,7 @@ async function main() {
         + (scenario.baselineP95 !== null
           ? ` vs baseline ${scenario.baselineP95.toFixed(0)}ms (${((scenario.ratio ?? 1) * 100 - 100).toFixed(0)}%)`
           : "")
-        + ` — SLO ${scenario.sloP95Ms}ms`,
+        + ` — SLO ${describeSlo(scenario)}`,
     );
   }
 

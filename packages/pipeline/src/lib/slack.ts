@@ -13,9 +13,9 @@
  * the run it was describing.
  */
 
-import { offenders } from "./baseline";
 import { ms, percent } from "./format";
 import type { RunDocument, ScenarioComparison } from "./run-document";
+import { STATUS_WORDS, headlineFor } from "./verdict";
 
 /** Commits listed before the message starts linking out instead. */
 const MAX_COMMITS = 5;
@@ -39,35 +39,15 @@ export interface SlackMessage {
 }
 
 const VERDICT: Record<RunDocument["status"], { emoji: string; label: string }> = {
-  passed: { emoji: ":large_green_circle:", label: "Pass" },
-  regressed: { emoji: ":large_yellow_circle:", label: "Regression" },
-  failed: { emoji: ":red_circle:", label: "Run failed" },
+  passed: { emoji: ":large_green_circle:", label: STATUS_WORDS.passed.label },
+  "slo-breach": { emoji: ":large_orange_circle:", label: STATUS_WORDS["slo-breach"].label },
+  regressed: { emoji: ":large_yellow_circle:", label: STATUS_WORDS.regressed.label },
+  failed: { emoji: ":red_circle:", label: STATUS_WORDS.failed.label },
 };
 
-/** One sentence saying what happened. Mirrors the email's headline. */
+/** One sentence saying what happened. The same sentence the email leads with. */
 export function slackHeadline(document: RunDocument): string {
-  const regressed = document.baseline ? offenders(document.baseline) : [];
-
-  if (document.status === "failed") {
-    return "The run did not complete, so tonight's numbers are partial.";
-  }
-  if (regressed.length > 0) {
-    const worst = regressed[0]!;
-    const rest = regressed.length > 1 ? ` (and ${regressed.length - 1} more)` : "";
-    return (
-      `*${worst.scenario}* is outside tolerance${rest}: p95 ${ms(worst.p95)} against `
-      + `${worst.baselineP95 !== null ? `a ${ms(worst.baselineP95)} baseline` : "no baseline yet"}`
-      + ` and a ${worst.sloP95Ms}ms SLO.`
-    );
-  }
-  if (document.baseline?.forming) {
-    return (
-      `Every scenario met its SLO. The baseline is still forming — `
-      + `${document.baseline.baselineRuns} comparable run(s) — so nothing is being `
-      + "compared against a median yet."
-    );
-  }
-  return "Every scenario met its SLO and stayed within tolerance of its baseline.";
+  return headlineFor(document, { emphasis: (name) => `*${name}*` });
 }
 
 /**
@@ -83,8 +63,8 @@ function table(comparisons: readonly ScenarioComparison[]): string {
   const width = Math.max(8, ...rows.map((row) => row.scenario.length));
 
   const lines = rows.map((row) => {
-    const flag =
-      row.verdict === "slo-breach" ? "!!" : row.verdict === "regressed" ? " !" : "  ";
+    // "!!" a regression (something changed), " !" an SLO miss with no movement.
+    const flag = row.verdict === "regressed" ? "!!" : !row.sloPass ? " !" : "  ";
     return (
       `${flag} ${row.scenario.padEnd(width)}  `
       + `${ms(row.p95).padStart(8)}  `

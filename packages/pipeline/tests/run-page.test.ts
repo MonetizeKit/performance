@@ -42,6 +42,8 @@ describe("renderRunPage", () => {
           baselineP95: 96,
           ratio: 1.0417,
           sloP95Ms: 120,
+          sloP95AboveFloorMs: null,
+          floorP50Ms: null,
           sloPass: true,
           verdict: "pass",
         },

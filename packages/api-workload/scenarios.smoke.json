@@ -19,6 +19,7 @@
   "workloadVersion": "smoke-w1",
   "settleSeconds": 2,
   "requestsPerMinuteBudget": 100,
+  "floorScenario": "network-floor",
   "scenarios": [
     {
       "name": "platform-baseline",
@@ -26,6 +27,19 @@
       "method": "GET",
       "authenticated": false,
       "rate": 5,
+      "timeUnit": "1s",
+      "duration": "10s",
+      "preAllocatedVUs": 5,
+      "sloP95Ms": 2000,
+      "sloErrorRate": 0.01,
+      "writes": false
+    },
+    {
+      "name": "network-floor",
+      "description": "Unauthenticated build-info read at the authenticated scenarios' rate; the floor the relative targets below stand on.",
+      "method": "GET",
+      "authenticated": false,
+      "rate": 1,
       "timeUnit": "1s",
       "duration": "10s",
       "preAllocatedVUs": 5,
@@ -42,7 +56,7 @@
       "timeUnit": "1s",
       "duration": "20s",
       "preAllocatedVUs": 5,
-      "sloP95Ms": 2000,
+      "sloP95AboveFloorMs": 2000,
       "sloErrorRate": 0.01,
       "writes": false
     },
@@ -55,7 +69,7 @@
       "timeUnit": "1s",
       "duration": "20s",
       "preAllocatedVUs": 5,
-      "sloP95Ms": 2000,
+      "sloP95AboveFloorMs": 2000,
       "sloErrorRate": 0.01,
       "writes": false
     },
@@ -68,7 +82,7 @@
       "timeUnit": "1s",
       "duration": "20s",
       "preAllocatedVUs": 5,
-      "sloP95Ms": 2000,
+      "sloP95AboveFloorMs": 2000,
       "sloErrorRate": 0.01,
       "writes": true
     }

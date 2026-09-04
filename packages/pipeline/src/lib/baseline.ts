@@ -88,14 +88,20 @@ function verdictFor(
   sloPass: boolean,
   forming: boolean,
 ): ScenarioVerdict {
+  // A regression is judged first, because it is the news: something moved
+  // tonight. A scenario that has sat outside its SLO for a month and then
+  // doubles must say "regressed", or the doubling hides behind a verdict the
+  // reader stopped looking at weeks ago. `sloPass` is carried beside the
+  // verdict, so the breach is never lost either way.
+  const compared = ratio !== null && baselineP95 !== null;
+  const regressed =
+    compared && ratio > REGRESSION_RATIO && p95 - baselineP95 >= MIN_REGRESSION_DELTA_MS;
+  if (regressed && !forming) return "regressed";
+
   // An SLO breach is a breach whatever the history says: the target is the
   // promise, and the baseline only describes what has been happening.
   if (!sloPass) return "slo-breach";
-  if (ratio === null || baselineP95 === null) return "baseline-forming";
-
-  const regressed =
-    ratio > REGRESSION_RATIO && p95 - baselineP95 >= MIN_REGRESSION_DELTA_MS;
-  if (regressed) return forming ? "baseline-forming" : "regressed";
+  if (!compared || regressed) return "baseline-forming";
   return "pass";
 }
 
@@ -125,6 +131,9 @@ export function analyzeBaseline(
         baselineP95,
         ratio,
         sloP95Ms: metrics.sloP95Ms,
+        // Older documents predate these fields; read them as absolute targets.
+        sloP95AboveFloorMs: metrics.sloP95AboveFloorMs ?? null,
+        floorP50Ms: metrics.floorP50Ms ?? null,
         sloPass: metrics.sloPass,
         verdict: verdictFor(metrics.p95, baselineP95, ratio, metrics.sloPass, forming),
       };
@@ -144,30 +153,35 @@ export function analyzeBaseline(
  * The run's overall status.
  *
  * A run that could not complete stays `failed` whatever the analysis says —
- * partial measurements must never be reported as a pass.
+ * partial measurements must never be reported as a pass. Otherwise a regression
+ * outranks an SLO breach: the breach may have been true every night this month,
+ * while the regression says something changed since last night, and that is the
+ * one somebody has to look at before the next deploy.
  */
 export function statusFrom(
   analysis: BaselineAnalysis,
   runFailed: boolean,
 ): RunStatus {
   if (runFailed) return "failed";
-  const regressed = analysis.scenarios.some(
-    (scenario) => scenario.verdict === "regressed" || scenario.verdict === "slo-breach",
-  );
-  return regressed ? "regressed" : "passed";
+  if (analysis.scenarios.some((scenario) => scenario.verdict === "regressed")) return "regressed";
+  if (analysis.scenarios.some((scenario) => !scenario.sloPass)) return "slo-breach";
+  return "passed";
 }
 
-/** Scenarios a report should lead with, worst first. */
+/**
+ * Scenarios a report should lead with: regressions first (they are what changed),
+ * then SLO breaches, each group worst first.
+ */
 export function offenders(analysis: BaselineAnalysis): ScenarioComparison[] {
   const rank: Record<ScenarioVerdict, number> = {
-    "slo-breach": 0,
-    regressed: 1,
+    regressed: 0,
+    "slo-breach": 1,
     "baseline-forming": 2,
     missing: 3,
     pass: 4,
   };
   return [...analysis.scenarios]
-    .filter((scenario) => scenario.verdict === "slo-breach" || scenario.verdict === "regressed")
+    .filter((scenario) => scenario.verdict === "regressed" || !scenario.sloPass)
     .sort((left, right) => {
       const byVerdict = rank[left.verdict] - rank[right.verdict];
       if (byVerdict !== 0) return byVerdict;

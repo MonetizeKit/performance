@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { analyzeBaseline } from "../src/lib/baseline";
+import { analyzeBaseline, statusFrom } from "../src/lib/baseline";
 import {
   computeTrends,
   renderHtml,
@@ -34,12 +34,7 @@ function history(count: number, p95: number) {
 function report(document: RunDocument, count = 14, baselineP95 = 100): ReportInput {
   const past = history(count, baselineP95);
   const analyzed = { ...document, baseline: analyzeBaseline(document, past) };
-  analyzed.status =
-    analyzed.baseline.scenarios.some(
-      (scenario) => scenario.verdict === "regressed" || scenario.verdict === "slo-breach",
-    ) && document.status !== "failed"
-      ? "regressed"
-      : document.status;
+  analyzed.status = statusFrom(analyzed.baseline, document.status === "failed");
 
   return {
     document: analyzed,
@@ -55,6 +50,8 @@ describe("subject line", () => {
       "[MonetizeKit Perf] PASS — delivery 2026-08-30",
     );
     expect(subjectFor(runDocument({ status: "regressed" }))).toContain("REGRESSION");
+    expect(subjectFor(runDocument({ status: "slo-breach" }))).toContain("SLO BREACH");
+    expect(subjectFor(runDocument({ status: "slo-breach" }))).not.toContain("REGRESSION");
     expect(subjectFor(runDocument({ status: "failed" }))).toContain("RUN FAILED");
   });
 });
@@ -105,12 +102,50 @@ describe("rendered report", () => {
     const html = renderHtml(input);
     const text = renderText(input);
 
-    expect(html).toContain("entitlement-check is the worst of 1 scenario(s)");
-    expect(html).toContain("400ms");
+    expect(html).toContain("1 scenario(s) regressed against the baseline");
+    expect(html).toContain("Worst: entitlement-check at p95 400ms");
     expect(html).toContain("120ms SLO");
     expect(text).toContain("REGRESSION");
-    // The healthy scenario is still reported: a table that only shows failures
-    // gives no sense of whether the rest moved too.
+  });
+
+  it("reports an SLO miss on a flat baseline as a breach, not a regression", () => {
+    // Same p95 every night, all of them over the target: nothing regressed.
+    const input = report(
+      runDocument({
+        scenarios: {
+          "usage-ingest": metrics({ p95: 725, sloP95Ms: 245, sloP95AboveFloorMs: 150, floorP50Ms: 95, sloPass: false }),
+        },
+      }),
+      14,
+      720,
+    );
+
+    const html = renderHtml(input);
+    const text = renderText(input);
+
+    expect(input.document.status).toBe("slo-breach");
+    expect(text).toContain("SLO BREACH");
+    expect(text).not.toContain("REGRESSION");
+    expect(html).toContain("SLO breach");
+    expect(html).toContain("1 scenario(s) missed their SLO without moving against the baseline");
+    // The target is shown as what it is: a floor measured tonight plus a budget.
+    expect(html).toContain("245ms (floor 95ms + 150ms)");
+  });
+
+  it("still lists the healthy scenarios beside the offenders", () => {
+    const html = renderHtml(
+      report(
+        runDocument({
+          scenarios: {
+            "entitlement-check": metrics({ p95: 400 }),
+            "catalog-reads": metrics({ p95: 100, sloP95Ms: 200 }),
+          },
+        }),
+      ),
+    );
+
+    // A table that only shows failures gives no sense of whether the rest
+    // moved too.
     expect(html).toContain("catalog-reads");
   });
 

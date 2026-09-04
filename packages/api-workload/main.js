@@ -61,10 +61,18 @@ function seconds(duration) {
   return Number(match[1]) * (match[2] === "m" ? 60 : 1);
 }
 
+/**
+ * k6 thresholds are fixed at init, so only an absolute `sloP95Ms` can be one.
+ * A scenario whose target is a budget above the measured floor
+ * (`sloP95AboveFloorMs`) is judged by the collector once the floor is known;
+ * k6 still enforces its error budget.
+ */
 function buildThresholds() {
   const thresholds = {};
   for (const scenario of CONFIG.scenarios) {
-    thresholds[`latency_${underscore(scenario.name)}`] = [`p(95)<${scenario.sloP95Ms}`];
+    if (typeof scenario.sloP95Ms === "number") {
+      thresholds[`latency_${underscore(scenario.name)}`] = [`p(95)<${scenario.sloP95Ms}`];
+    }
     thresholds[`failed_${underscore(scenario.name)}`] = [`rate<=${scenario.sloErrorRate}`];
   }
   return thresholds;
@@ -250,6 +258,20 @@ export function platform_baseline() {
     tags: { scenario: "platform-baseline" },
   });
   observe("platform-baseline", response);
+}
+
+/**
+ * The network floor: the same empty request as `platform-baseline`, offered at
+ * the authenticated scenarios' own rate and concurrency. Its median is what a
+ * request costs before the API does any work, and is what every
+ * `sloP95AboveFloorMs` target is resolved from.
+ */
+export function network_floor() {
+  const response = http.get(`${BASE_URL}/api/build-info`, {
+    headers: baseHeaders(),
+    tags: { scenario: "network-floor" },
+  });
+  observe("network-floor", response);
 }
 
 export function entitlement_check(data) {

@@ -3,7 +3,8 @@
  *
  * `packages/api-workload/scenarios.json` is the single definition of the
  * workload. k6 reads it with its own `open()`; everything here reads the same
- * file so the SLOs the collector records are provably the SLOs k6 enforced.
+ * file, so an absolute SLO the collector records is provably the one k6
+ * enforced, and a floor-relative one is resolved from the same catalog k6 ran.
  */
 
 import { readFileSync } from "node:fs";
@@ -22,7 +23,18 @@ export interface ScenarioDefinition {
   timeUnit: string;
   duration: string;
   preAllocatedVUs: number;
-  sloP95Ms: number;
+  /**
+   * Absolute p95 target in milliseconds. Exactly one of this and
+   * `sloP95AboveFloorMs` is set.
+   */
+  sloP95Ms?: number;
+  /**
+   * p95 budget above the network floor, in milliseconds. The target is
+   * resolved per run as the floor scenario's p50 plus this budget, so a
+   * scenario is judged on the work the API did rather than on how far the
+   * runner happens to sit from the deployment.
+   */
+  sloP95AboveFloorMs?: number;
   sloErrorRate: number;
   writes: boolean;
 }
@@ -40,7 +52,75 @@ export interface ScenarioCatalog {
    * actually reports before offering any load.
    */
   requestsPerMinuteBudget: number;
+  /**
+   * The scenario whose p50 is the network floor for every `sloP95AboveFloorMs`
+   * target. Unauthenticated, no query cost, and offered at the same rate and
+   * concurrency as the scenarios it floors — a floor measured under different
+   * concurrency measures cold starts, not the network.
+   */
+  floorScenario?: string;
   scenarios: ScenarioDefinition[];
+}
+
+/** True when the scenario's target is a budget above the floor. */
+export function isFloorRelative(scenario: ScenarioDefinition): boolean {
+  return typeof scenario.sloP95AboveFloorMs === "number";
+}
+
+/**
+ * Check that every scenario's SLO is expressible: one target each, and a floor
+ * to stand on wherever a target is relative to it.
+ */
+export function validateSloDeclarations(catalog: ScenarioCatalog, path: string): void {
+  const names = new Set(catalog.scenarios.map((scenario) => scenario.name));
+  const floor = catalog.floorScenario
+    ? catalog.scenarios.find((scenario) => scenario.name === catalog.floorScenario)
+    : undefined;
+
+  if (catalog.floorScenario !== undefined) {
+    if (!floor) {
+      throw new Error(
+        `${path} names "${catalog.floorScenario}" as its floorScenario but declares no such scenario.`,
+      );
+    }
+    if (floor.authenticated) {
+      throw new Error(
+        `${path}: floorScenario "${floor.name}" is authenticated. The floor must carry no `
+          + "query cost or key budget, or it measures the API rather than the distance to it.",
+      );
+    }
+    if (typeof floor.sloP95Ms !== "number") {
+      throw new Error(
+        `${path}: floorScenario "${floor.name}" must declare an absolute sloP95Ms; a floor `
+          + "cannot be relative to itself.",
+      );
+    }
+  }
+
+  for (const scenario of catalog.scenarios) {
+    const absolute = typeof scenario.sloP95Ms === "number";
+    const relative = typeof scenario.sloP95AboveFloorMs === "number";
+    if (absolute === relative) {
+      throw new Error(
+        `${path}: scenario "${scenario.name}" must declare exactly one of sloP95Ms `
+          + `(absolute) or sloP95AboveFloorMs (budget above the floor); it declares `
+          + `${absolute ? "both" : "neither"}.`,
+      );
+    }
+    if (relative && !floor) {
+      throw new Error(
+        `${path}: scenario "${scenario.name}" declares sloP95AboveFloorMs but the catalog `
+          + "names no floorScenario to measure it from.",
+      );
+    }
+    if ((absolute && scenario.sloP95Ms! <= 0) || (relative && scenario.sloP95AboveFloorMs! <= 0)) {
+      throw new Error(`${path}: scenario "${scenario.name}" declares a non-positive p95 target.`);
+    }
+  }
+
+  if (floor && names.size !== catalog.scenarios.length) {
+    throw new Error(`${path} declares duplicate scenario names.`);
+  }
 }
 
 /** Seconds in a k6 duration string (`"30s"`, `"2m"`). */
@@ -87,12 +167,15 @@ export function loadScenarioCatalog(path: string = SCENARIOS_PATH): ScenarioCata
     );
   }
 
-  return {
+  const catalog: ScenarioCatalog = {
     workloadVersion: raw.workloadVersion,
     settleSeconds: raw.settleSeconds ?? 0,
     requestsPerMinuteBudget: raw.requestsPerMinuteBudget,
     scenarios: raw.scenarios,
   };
+  if (raw.floorScenario !== undefined) catalog.floorScenario = raw.floorScenario;
+  validateSloDeclarations(catalog, path);
+  return catalog;
 }
 
 /** k6 turns scenario names into metric-name fragments this way. */

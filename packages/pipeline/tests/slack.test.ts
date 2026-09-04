@@ -35,6 +35,8 @@ function baseline(overrides: Partial<BaselineAnalysis> = {}): BaselineAnalysis {
         baselineP95: 96,
         ratio: 1.04,
         sloP95Ms: 120,
+        sloP95AboveFloorMs: null,
+        floorP50Ms: null,
         sloPass: true,
         verdict: "pass",
       },
@@ -59,6 +61,8 @@ const REGRESSED = runDocument({
         baselineP95: 100,
         ratio: 2.4,
         sloP95Ms: 120,
+        sloP95AboveFloorMs: null,
+        floorP50Ms: null,
         sloPass: true,
         verdict: "regressed",
       },
@@ -68,6 +72,8 @@ const REGRESSED = runDocument({
         baselineP95: 150,
         ratio: 2,
         sloP95Ms: 200,
+        sloP95AboveFloorMs: null,
+        floorP50Ms: null,
         sloPass: false,
         verdict: "slo-breach",
       },
@@ -97,12 +103,41 @@ describe("the notification fallback", () => {
 });
 
 describe("slackHeadline", () => {
-  it("names the worst offender and counts the rest", () => {
+  it("leads with the regression, counts the SLO misses separately, and names the worst number", () => {
     const headline = slackHeadline(REGRESSED);
 
-    expect(headline).toContain("catalog-reads");
-    expect(headline).toContain("and 1 more");
-    expect(headline).toContain("300ms");
+    expect(headline).toContain("1 scenario(s) regressed against the baseline");
+    expect(headline).toContain("1 scenario(s) missed their SLO");
+    expect(headline).toContain("*entitlement-check*");
+    expect(headline).toContain("240ms");
+    expect(headline).toContain("100ms baseline");
+  });
+
+  it("says an SLO miss with no movement is a target miss, not a change", () => {
+    const headline = slackHeadline(
+      runDocument({
+        status: "slo-breach",
+        baseline: baseline({
+          scenarios: [
+            {
+              scenario: "usage-ingest",
+              p95: 725,
+              baselineP95: 720,
+              ratio: 1.01,
+              sloP95Ms: 245,
+              sloP95AboveFloorMs: 150,
+              floorP50Ms: 95,
+              sloPass: false,
+              verdict: "slo-breach",
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(headline).not.toContain("regressed");
+    expect(headline).toContain("a target miss, not a change since the last run");
+    expect(headline).toContain("245ms (floor 95ms + 150ms) SLO");
   });
 
   it("says the baseline is still forming rather than implying a comparison", () => {
@@ -126,8 +161,9 @@ describe("buildSlackMessage", () => {
   it("flags a breach in the table so it is visible without reading numbers", () => {
     const table = JSON.stringify(build(REGRESSED).blocks);
 
-    expect(table).toContain("!! catalog-reads");
-    expect(table).toContain(" ! entitlement-check");
+    // "!!" marks what changed; " !" marks a target missed without moving.
+    expect(table).toContain("!! entitlement-check");
+    expect(table).toContain(" ! catalog-reads");
   });
 
   it("uses Slack mrkdwn, not standard markdown", () => {
@@ -136,7 +172,7 @@ describe("buildSlackMessage", () => {
     const rendered = JSON.stringify(build(REGRESSED).blocks);
 
     expect(rendered).not.toContain("**");
-    expect(rendered).toContain("*catalog-reads*");
+    expect(rendered).toContain("*entitlement-check*");
   });
 
   it("puts what shipped in the message rather than behind a link", () => {
@@ -214,6 +250,8 @@ describe("buildSlackMessage", () => {
           baselineP95: 90,
           ratio: 1.1,
           sloP95Ms: 200,
+          sloP95AboveFloorMs: null,
+          floorP50Ms: null,
           sloPass: true,
           verdict: "pass" as const,
         })),

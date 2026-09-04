@@ -12,9 +12,9 @@
  * it renders the same from a workflow artifact, a static host, or a file.
  */
 
-import { offenders } from "./baseline";
 import { escapeHtml, ms, percent, shortTimestamp } from "./format";
 import type { ChangeSet, RunDocument, ScenarioComparison } from "./run-document";
+import { STATUS_WORDS, describeSlo, headlineFor } from "./verdict";
 
 /** Where a run's page lives in the store. Flat: the run id alone is unique. */
 export function runPagePath(runId: string): string {
@@ -32,9 +32,10 @@ export interface RunPageInput {
 }
 
 const STATUS_STYLE: Record<RunDocument["status"], { background: string; border: string; label: string }> = {
-  passed: { background: "#ecfdf5", border: "#10b981", label: "Pass" },
-  regressed: { background: "#fffbeb", border: "#f59e0b", label: "Regression" },
-  failed: { background: "#fef2f2", border: "#ef4444", label: "Run failed" },
+  passed: { background: "#ecfdf5", border: "#10b981", label: STATUS_WORDS.passed.label },
+  "slo-breach": { background: "#fff7ed", border: "#f97316", label: STATUS_WORDS["slo-breach"].label },
+  regressed: { background: "#fffbeb", border: "#f59e0b", label: STATUS_WORDS.regressed.label },
+  failed: { background: "#fef2f2", border: "#ef4444", label: STATUS_WORDS.failed.label },
 };
 
 function verdictColour(verdict: ScenarioComparison["verdict"]): string {
@@ -57,6 +58,8 @@ function scenarioRows(document: RunDocument): string {
         baselineP95: null,
         ratio: null,
         sloP95Ms: metrics.sloP95Ms,
+        sloP95AboveFloorMs: metrics.sloP95AboveFloorMs ?? null,
+        floorP50Ms: metrics.floorP50Ms ?? null,
         sloPass: metrics.sloPass,
         verdict: "baseline-forming" as const,
       }));
@@ -74,7 +77,7 @@ function scenarioRows(document: RunDocument): string {
         <td style="${number}color:#6b7280;">${metrics ? ms(metrics.p99) : "—"}</td>
         <td style="${number}color:#6b7280;">${comparison.baselineP95 !== null ? ms(comparison.baselineP95) : "—"}</td>
         <td style="${number}">${percent(comparison.ratio)}</td>
-        <td style="${number}color:#6b7280;">${comparison.sloP95Ms}ms</td>
+        <td style="${number}color:#6b7280;white-space:nowrap;">${escapeHtml(describeSlo(comparison))}</td>
         <td style="${number}color:#6b7280;">${metrics ? metrics.requests : "—"}</td>
         <td style="${number}color:#6b7280;">${metrics ? `${(metrics.errorRate * 100).toFixed(2)}%` : "—"}</td>
         <td style="${cell}font-size:12px;color:${verdictColour(comparison.verdict)};">${escapeHtml(comparison.verdict)}</td>
@@ -174,16 +177,7 @@ function citation(input: RunPageInput): string {
 export function renderRunPage(input: RunPageInput): string {
   const { document, rootPath = "../", rawDocumentPath = null } = input;
   const banner = STATUS_STYLE[document.status];
-  const regressed = document.baseline ? offenders(document.baseline) : [];
-
-  const summary =
-    document.status === "failed"
-      ? "The run did not complete, so these numbers are partial."
-      : regressed.length > 0
-        ? `${regressed.length} scenario(s) outside tolerance: ${regressed.map((scenario) => escapeHtml(scenario.scenario)).join(", ")}.`
-        : document.baseline?.forming
-          ? `Every scenario met its SLO. The baseline is still forming — ${document.baseline.baselineRuns} comparable run(s) — so nothing is being compared against a median yet.`
-          : "Every scenario met its SLO and stayed within tolerance of its baseline.";
+  const summary = headlineFor(document);
 
   const detail = (label: string, value: string) =>
     `<tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">${label}</td><td>${value}</td></tr>`;

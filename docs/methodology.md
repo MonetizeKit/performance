@@ -24,26 +24,59 @@ only ever compared within one.
 
 `packages/api-workload/scenarios.json` is the single definition of the workload,
 read by the k6 entrypoint and by every pipeline step, so the SLOs a run records
-are provably the SLOs k6 enforced. Eight scenarios:
+are provably the SLOs k6 enforced. Nine scenarios:
 
 | Scenario | Path under test | SLO p95 |
 |---|---|---|
-| `platform-baseline` | Unauthenticated `/api/build-info` | 400ms |
-| `entitlement-check` | Single feature check | 120ms |
-| `entitlement-batch` | Multi-feature check, one round trip | 200ms |
-| `customer-reads` | Paginated list over the full population | 250ms |
-| `catalog-reads` | Published products and plans | 200ms |
-| `usage-ingest` | Single event stamped at ingest | 150ms |
-| `usage-ingest-backdated` | Single event carrying its own `occurredAt` | 150ms |
-| `usage-ingest-batch` | Bulk ingest at the 500-item ceiling | 1500ms |
+| `network-floor` | Unauthenticated `/api/build-info`, at the authenticated scenarios' rate | 250ms |
+| `platform-baseline` | Unauthenticated `/api/build-info`, ten concurrent | 400ms |
+| `entitlement-check` | Single feature check | floor + 75ms |
+| `entitlement-batch` | Multi-feature check, one round trip | floor + 150ms |
+| `customer-reads` | Paginated list over the full population | floor + 200ms |
+| `catalog-reads` | Published products and plans | floor + 150ms |
+| `usage-ingest` | Single event stamped at ingest | floor + 150ms |
+| `usage-ingest-backdated` | Single event carrying its own `occurredAt` | floor + 150ms |
+| `usage-ingest-batch` | Bulk ingest at the 500-item ceiling | floor + 1500ms |
+
+### SLOs are budgets above the network floor
+
+The runner sits some distance from the deployment, and that distance is not
+the API's to answer for. The first nightly, from a GitHub-hosted runner, put an
+empty `/api/build-info` read at 187ms p50 and then reported seven authenticated
+scenarios as breaching 120–250ms absolute targets: the round trip alone was
+most of each budget, and the report was grading the runner's network, not the
+platform.
+
+So the authenticated scenarios declare `sloP95AboveFloorMs` rather than an
+absolute number. `network-floor` offers the same empty request at the
+authenticated scenarios' own rate and concurrency (one request per second, for a
+minute), and the collector resolves each authenticated target *for that run* as
+the floor's p50 plus the declared budget. Both the resolved target and the floor
+it rested on are recorded on the scenario, so a run page can say "judged against
+262ms (a 187ms floor plus 75ms)" rather than a number whose origin is lost. The
+same API work then passes or fails the same way whether it was measured from a
+runner next to the deployment or one an ocean away.
+
+Two consequences follow. k6 enforces latency thresholds only for scenarios with
+absolute targets, since it cannot know the floor when it initialises; error
+budgets are enforced for every scenario, and the p95 verdicts for relative
+scenarios are made by `perf:collect`. And if the floor scenario produced no
+data, every relative scenario is recorded as missing rather than judged against
+a floor that was not measured.
+
+`platform-baseline` and `network-floor` keep absolute targets. The floor being
+slow is a platform finding in its own right, and `platform-baseline` offers ten
+concurrent requests to catch cold-start and concurrency behaviour that a floor
+measured one request at a time would not see.
 
 ### SLO hypotheses
 
-The SLO values are hypotheses to be confirmed against the first baselines, not
+The budgets are hypotheses to be confirmed against the first baselines, not
 settled contracts. They were chosen from what the paths do — an entitlement
 check is one indexed lookup and should be fast; a 500-item batch does 500 inserts
-and cannot be — and they will be revised, with a `workloadVersion` bump, once
-the history says what the platform actually does.
+and cannot be — less the network floor they were implicitly carrying before, and
+they will be revised, with a `workloadVersion` bump, once the history says what
+the platform actually does.
 
 ### Properties that make one night comparable to the next
 
@@ -65,6 +98,19 @@ its p95 rests on the slowest thirty of them rather than the slowest six a
 two-minute run would offer. Before offering any load, `perf:run` reads the key's
 actual `X-RateLimit-Limit` and refuses to start if the workload would exceed it,
 because a run full of 429s measures the limiter, not the platform.
+
+**The key must be idle.** For the same reason, `perf:run` refuses to start
+while anything else is spending the key's budget. It reads
+`X-RateLimit-Remaining` alongside the limit and refuses if more of the window is
+already gone than its own probe accounts for (a tolerance of three covers a
+stray manual call); then it samples the window again fifteen seconds later and
+refuses if it fell by more than that second probe cost. The window slides, so
+old requests ageing out can only raise `remaining` — a fall beyond our own
+request means another client. The likely one is the application repository's
+demo-refresh workflow, which is why the nightly is scheduled after it.
+`--allow-shared-key` overrides, and the run's notes then say so, so a moved
+error rate on such a run carries its own explanation rather than being read as
+a platform problem.
 
 This is worth stating plainly: **these numbers measure latency under light
 load.** They will catch an added query, a lost index, or a payload that grew.
@@ -102,7 +148,7 @@ perf:run  →  perf:collect  →  perf:analyze  →  perf:persist  →  perf:rep
 | `pnpm perf:analyze` | Compare against the baseline, attribute the build range, decide the verdict. |
 | `pnpm perf:persist` | Append the Run Document to the `perf-data` branch and re-render the site. |
 | `pnpm perf:dashboard` | Render the trends page on its own, without a run. |
-| `pnpm perf:report` | Render and deliver the report. `--fail-on-regression` carries the verdict in the exit code. |
+| `pnpm perf:report` | Render and deliver the report. `--fail-on-regression` carries the verdict (regression or SLO breach) in the exit code. |
 
 The secret key reaches k6 through the child process environment, not `--env`
 flags: k6 reads environment variables into `__ENV`, and argv is world-readable
@@ -127,7 +173,8 @@ report claims are the numbers that were persisted, not a second derivation from
 raw k6 output.
 
 Beyond the per-scenario metrics (avg, min, p50, p90, p95, p99, max, request
-count, achieved rps, error rate, SLO result) it records the conditions the
+count, achieved rps, error rate, the SLO target resolved for the run and the
+floor it rested on, SLO result) it records the conditions the
 numbers hold under: `environment`, `baseUrl`, `appSha` (the commit the
 deployment reported it was built from, read from `/api/build-info`, not from any
 checkout), `deploymentId`, `datasetVersion`, `workloadVersion`,
@@ -148,8 +195,20 @@ a previous-run comparison is not.
   verdicts are informational and labelled `baseline-forming`.
 - **Regressed**: p95 exceeds the baseline median by more than 1.2× **and** by at
   least 20ms in absolute terms.
-- An SLO breach is `slo-breach` regardless of the baseline; a run that could not
-  complete stays `failed` whatever the analysis says.
+- **SLO breach**: p95 exceeds the scenario's target for the run (§2) but has not
+  moved against the baseline. A scenario already outside its SLO that gets
+  slower reads `regressed`, not `slo-breach`: the regression is what changed.
+- A run that could not complete stays `failed` whatever the analysis says.
+
+The run's status follows the same order — `failed`, then `regressed`, then
+`slo-breach`, then `passed` — and the report's subject, the Slack post, the run
+page and the CLI exit message all use the same words for it. The distinction is
+deliberate. "Regression" tells the reader something shipped or something in the
+environment moved since last night; "SLO breach" tells them the platform is
+outside a target it was set, which on a flat baseline is a finding about the
+target as much as about the platform. The first nightly reported a `REGRESSION`
+with no history to regress from; that is the report this rule exists to not send
+again.
 
 The absolute floor matters. A ratio alone cannot tell a regression from noise on
 a fast scenario: a 12ms median moving to 17ms is +48% by ratio and five
@@ -227,7 +286,7 @@ overrides it for a custom domain.
 
 ## 9. The report
 
-Sent on every outcome — pass, regression, and run failure. A report that only
+Sent on every outcome — pass, SLO breach, regression, and run failure. A report that only
 arrives when something is wrong teaches its readers that silence means nothing
 happened, and silence is exactly what a broken cron looks like.
 

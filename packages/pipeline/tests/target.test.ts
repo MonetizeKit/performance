@@ -1,18 +1,23 @@
 /**
  * The preflight exists so a misconfigured night costs a second rather than a
  * quarter of an hour of load and a record that has to be explained away. These
- * tests cover the three ways it earns that: a rejected key, a target that is not
- * serving, and a workload the key is not allowed to offer.
+ * tests cover the four ways it earns that: a rejected key, a target that is not
+ * serving, a workload the key is not allowed to offer, and a key that something
+ * else is already spending.
  */
 
 import { describe, expect, it } from "vitest";
 
 import {
+  assertRateBudgetIdle,
   assertWorkloadFitsBudget,
   healthCheck,
+  PREFLIGHT_OWN_REQUESTS,
+  RATE_BUDGET_CONTENTION_TOLERANCE,
   readBuildInfo,
   resolveEnvironmentName,
   resolveTarget,
+  sampleRateBudget,
 } from "../src/lib/target";
 
 const TARGET = {
@@ -162,13 +167,14 @@ describe("preflight", () => {
       TARGET,
       responder({
         body: { id: "ws_1", name: "MonetizeKit Showcase" },
-        headers: { "x-ratelimit-limit": "100" },
+        headers: { "x-ratelimit-limit": "100", "x-ratelimit-remaining": "99" },
       }),
     );
 
     expect(health).toEqual({
       workspaceName: "MonetizeKit Showcase",
       rateLimitPerMinute: 100,
+      rateLimitRemaining: 99,
     });
   });
 
@@ -229,6 +235,7 @@ describe("preflight", () => {
     const health = await healthCheck(TARGET, responder({ body: { name: "x" } }));
 
     expect(health.rateLimitPerMinute).toBeNull();
+    expect(health.rateLimitRemaining).toBeNull();
   });
 
   it("reads the limit from a rate-limited endpoint, not from the identity call", async () => {
@@ -249,7 +256,11 @@ describe("preflight", () => {
 
     const health = await healthCheck(TARGET, byPath);
 
-    expect(health).toEqual({ workspaceName: "Showcase", rateLimitPerMinute: 100 });
+    expect(health).toEqual({
+      workspaceName: "Showcase",
+      rateLimitPerMinute: 100,
+      rateLimitRemaining: null,
+    });
     expect(requested).toEqual([
       "https://delivery.example.com/api/v1/workspace/current",
       "https://delivery.example.com/api/v1/customers?limit=1",
@@ -291,6 +302,73 @@ describe("workload budget guard", () => {
     expect(stderrFrom(() => assertWorkloadFitsBudget(60, 100, null))).toMatch(
       /did not report a rate limit/,
     );
+  });
+});
+
+describe("shared-key guard", () => {
+  // The limit is 100 and the preflight has made its one counted request, so an
+  // idle key reads 99 remaining.
+  const IDLE = { limit: 100, remaining: 100 - PREFLIGHT_OWN_REQUESTS };
+
+  it("starts on an idle key", () => {
+    expect(() => assertRateBudgetIdle(IDLE, null)).not.toThrow();
+    // Second sample: our own probe cost one more, nothing else moved.
+    expect(() =>
+      assertRateBudgetIdle(IDLE, { limit: 100, remaining: IDLE.remaining - PREFLIGHT_OWN_REQUESTS }),
+    ).not.toThrow();
+  });
+
+  it("forgives a stray manual call but not a process", () => {
+    const stray = { limit: 100, remaining: IDLE.remaining - RATE_BUDGET_CONTENTION_TOLERANCE };
+    expect(() => assertRateBudgetIdle(stray, null)).not.toThrow();
+
+    const process_ = { limit: 100, remaining: IDLE.remaining - RATE_BUDGET_CONTENTION_TOLERANCE - 1 };
+    expect(() => assertRateBudgetIdle(process_, null)).toThrow(
+      /4 of this key's 100 requests\/minute were already spent/,
+    );
+  });
+
+  it("refuses when the budget is falling faster than the preflight spends it", () => {
+    // Between the two samples we made one request; the window lost eleven.
+    expect(() =>
+      assertRateBudgetIdle(IDLE, { limit: 100, remaining: IDLE.remaining - 11 }),
+    ).toThrow(/fell from 99 to 88 in 15s[\s\S]*another client is drawing it down/);
+  });
+
+  it("does not mistake the sliding window aging out for contention", () => {
+    // Old requests leaving the window can only raise `remaining`; that is not
+    // evidence of anyone else.
+    expect(() =>
+      assertRateBudgetIdle({ limit: 100, remaining: 97 }, { limit: 100, remaining: 100 }),
+    ).not.toThrow();
+  });
+
+  it("tells the operator what is probably holding the key and how to override", () => {
+    expect(() => assertRateBudgetIdle({ limit: 100, remaining: 50 }, null)).toThrow(
+      /demo-refresh\.yml[\s\S]*--allow-shared-key/,
+    );
+  });
+
+  it("cannot judge when the second sample has no headers", () => {
+    // A target that stops reporting mid-preflight yields no second sample; the
+    // first-sample check still applies, the drawdown check is skipped.
+    expect(() => assertRateBudgetIdle(IDLE, null)).not.toThrow();
+  });
+
+  it("samples the window from the rate-limited endpoint", async () => {
+    const requested: string[] = [];
+    const recording = (async (url: string) => {
+      requested.push(url);
+      return new Response("{}", {
+        status: 200,
+        headers: { "x-ratelimit-limit": "100", "x-ratelimit-remaining": "42" },
+      });
+    }) as unknown as typeof fetch;
+
+    await expect(sampleRateBudget(TARGET, recording)).resolves.toEqual({ limit: 100, remaining: 42 });
+    expect(requested).toEqual(["https://delivery.example.com/api/v1/customers?limit=1"]);
+
+    await expect(sampleRateBudget(TARGET, responder({}))).resolves.toBeNull();
   });
 });
 
