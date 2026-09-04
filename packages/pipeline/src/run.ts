@@ -29,10 +29,13 @@ import {
   peakRequestsPerMinute,
 } from "./lib/scenarios";
 import {
+  assertRateBudgetIdle,
   assertWorkloadFitsBudget,
   healthCheck,
+  RATE_BUDGET_SAMPLE_GAP_S,
   readBuildInfo,
   resolveTarget,
+  sampleRateBudget,
 } from "./lib/target";
 
 const HELP = `
@@ -46,6 +49,8 @@ Flags:
   --smoke            Shorthand for --catalog ${display(SMOKE_SCENARIOS_PATH)}, a
                      two-minute run of the whole pipeline
   --skip-health      Do not preflight the target before offering load
+  --allow-shared-key Start even if another client is spending the key's rate
+                     budget (the run's notes will say so)
   --help
 
 Environment:
@@ -58,6 +63,44 @@ Environment:
                     Deployment Protection; sent on every request
   K6_BINARY         Path to the k6 binary (default: k6 on PATH)
 `;
+
+/**
+ * Two samples of the key's window, a gap apart, and a refusal if anything else
+ * is spending it. Returns a note for the run when the operator chose to go
+ * ahead regardless, so the record carries the caveat rather than the reader
+ * having to guess why the error rate moved.
+ */
+async function checkRateBudgetIdle(
+  target: ReturnType<typeof resolveTarget>,
+  health: { rateLimitPerMinute: number | null; rateLimitRemaining: number | null },
+  allowShared: boolean,
+): Promise<string | null> {
+  if (health.rateLimitPerMinute === null || health.rateLimitRemaining === null) {
+    process.stderr.write(
+      "Note: the target did not report its remaining rate budget, so the preflight cannot "
+        + "tell whether another client is using this key.\n",
+    );
+    return null;
+  }
+
+  const first = { limit: health.rateLimitPerMinute, remaining: health.rateLimitRemaining };
+  progress(
+    `Watching the key's rate budget for ${RATE_BUDGET_SAMPLE_GAP_S}s `
+      + `(${first.remaining}/${first.limit} remaining)`,
+  );
+  await new Promise((resolve) => setTimeout(resolve, RATE_BUDGET_SAMPLE_GAP_S * 1000));
+  const second = await sampleRateBudget(target);
+
+  try {
+    assertRateBudgetIdle(first, second);
+    return null;
+  } catch (error) {
+    if (!allowShared) throw error;
+    const reason = error instanceof Error ? error.message.split("\n")[0]! : String(error);
+    process.stderr.write(`Warning: ${reason}\n  Continuing because --allow-shared-key was given.\n`);
+    return `started with --allow-shared-key: ${reason}`;
+  }
+}
 
 function k6Version(binary: string): string | null {
   const result = spawnSync(binary, ["version"], { encoding: "utf8" });
@@ -101,6 +144,7 @@ async function main() {
 
   const peak = peakRequestsPerMinute(catalog);
   let health = null;
+  let sharedKeyNote: string | null = null;
   if (flags.has("skip-health")) {
     assertWorkloadFitsBudget(peak, catalog.requestsPerMinuteBudget, null);
   } else {
@@ -111,6 +155,7 @@ async function main() {
       catalog.requestsPerMinuteBudget,
       health.rateLimitPerMinute,
     );
+    sharedKeyNote = await checkRateBudgetIdle(target, health, flags.has("allow-shared-key"));
   }
 
   const build = await readBuildInfo(target);
@@ -175,6 +220,7 @@ async function main() {
     k6Version: version,
     k6ExitCode: k6.status,
     summaryPath,
+    notes: sharedKeyNote ? [sharedKeyNote] : [],
   } as const;
 
   writeRunContext(contextPath, context);

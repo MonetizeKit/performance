@@ -149,6 +149,11 @@ export interface Health {
    * `X-RateLimit-Limit`. Null when the target does not report it.
    */
   rateLimitPerMinute: number | null;
+  /**
+   * Requests left in the key's current window after the probe, from
+   * `X-RateLimit-Remaining`. Null when the target does not report it.
+   */
+  rateLimitRemaining: number | null;
 }
 
 /**
@@ -212,11 +217,109 @@ export async function healthCheck(
   // the real ceiling is what keeps the run from being fifteen minutes of 429s.
   const probe = await fetchImpl(`${target.baseUrl}${LIMIT_PROBE_PATH}`, { headers });
   const limit = Number(probe.headers.get("x-ratelimit-limit"));
+  const remaining = Number(probe.headers.get("x-ratelimit-remaining"));
 
   return {
     workspaceName: typeof body.name === "string" ? body.name : null,
     rateLimitPerMinute: Number.isFinite(limit) && limit > 0 ? limit : null,
+    rateLimitRemaining:
+      probe.headers.get("x-ratelimit-remaining") !== null && Number.isFinite(remaining) && remaining >= 0
+        ? remaining
+        : null,
   };
+}
+
+/**
+ * Requests spent from the key's window by anything other than this preflight,
+ * before this run offered any load. The preflight's own probe is the one call
+ * the limiter has seen from us by the time the header is read.
+ */
+export const PREFLIGHT_OWN_REQUESTS = 1;
+
+/**
+ * Requests another client may have spent in the window without being counted
+ * as a competitor. Covers a stray manual call or a dashboard refresh; anything
+ * more is a process on the same key.
+ */
+export const RATE_BUDGET_CONTENTION_TOLERANCE = 3;
+
+/** Seconds between the two samples of the key's remaining budget. */
+export const RATE_BUDGET_SAMPLE_GAP_S = 15;
+
+export interface RateBudgetSample {
+  limit: number;
+  remaining: number;
+}
+
+/** A second read of the key's window, for the drawdown check. */
+export async function sampleRateBudget(
+  target: PerfTarget,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RateBudgetSample | null> {
+  const headers = { ...baseHeaders(target), "X-API-Key": target.apiKey, accept: "application/json" };
+  const probe = await fetchImpl(`${target.baseUrl}${LIMIT_PROBE_PATH}`, { headers });
+  const limit = Number(probe.headers.get("x-ratelimit-limit"));
+  const remaining = Number(probe.headers.get("x-ratelimit-remaining"));
+  if (!Number.isFinite(limit) || limit <= 0 || !Number.isFinite(remaining)) return null;
+  return { limit, remaining };
+}
+
+/**
+ * Refuse to start while something else is spending the key's rate budget.
+ *
+ * The workload is sized to the key's whole per-minute allowance, so any other
+ * client on the same key — the demo tenant's refresh job, a seeder catching up,
+ * someone poking the API from a laptop — turns some of the run's requests into
+ * 429s. The collector would record that as an error rate, the analyzer as a
+ * breach, and the report would blame the platform for contention the harness
+ * caused. Better to not start, and to say what was found.
+ *
+ * Two checks, because a single snapshot cannot tell them apart:
+ *
+ * 1. Budget already spent: on the first probe, more of the window has gone than
+ *    the preflight itself used plus a small tolerance. Someone was here first.
+ * 2. Budget being drawn down: the window is sampled again after a gap, and it
+ *    has lost more than the sample itself cost. Someone is here now. The window
+ *    is sliding, so old requests aging out can only make `remaining` rise;
+ *    a fall beyond our own request is unambiguous.
+ */
+export function assertRateBudgetIdle(
+  first: RateBudgetSample,
+  second: RateBudgetSample | null,
+  options: { tolerance?: number; gapSeconds?: number } = {},
+): void {
+  const tolerance = options.tolerance ?? RATE_BUDGET_CONTENTION_TOLERANCE;
+  const gap = options.gapSeconds ?? RATE_BUDGET_SAMPLE_GAP_S;
+  const foreign = first.limit - first.remaining - PREFLIGHT_OWN_REQUESTS;
+
+  if (foreign > tolerance) {
+    throw new Error(
+      `${foreign} of this key's ${first.limit} requests/minute were already spent when the `
+        + "preflight started; another client is using the performance key.\n"
+        + contentionAdvice(),
+    );
+  }
+
+  if (second) {
+    const drawn = first.remaining - second.remaining - PREFLIGHT_OWN_REQUESTS;
+    if (drawn > 0) {
+      throw new Error(
+        `the key's remaining budget fell from ${first.remaining} to ${second.remaining} in `
+          + `${gap}s while this preflight made one request; another client is drawing it down.\n`
+          + contentionAdvice(),
+      );
+    }
+  }
+}
+
+function contentionAdvice(): string {
+  return (
+    "  The workload is sized to the whole allowance, so sharing it would turn part of the run\n"
+    + "  into 429s that the report would call a platform problem. Likely causes: the demo\n"
+    + "  refresh workflow (demo-refresh.yml in the application repo) still running, a seeder\n"
+    + "  catch-up, or a manual session with the same key. Wait for it to finish, or run with\n"
+    + "  --allow-shared-key to proceed anyway and have the run say so in its notes."
+  );
 }
 
 /**
