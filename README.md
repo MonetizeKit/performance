@@ -137,6 +137,48 @@ Repository variables (public facts and gates, not secrets):
 5. Wait five nights. Verdicts read `baseline-forming` until five comparable runs
    exist; the sixth is the first that can call a regression.
 
+## Running it by hand
+
+The nightly is also a manual workflow. In the repository, **Actions → Nightly
+performance run → Run workflow**, pick `main`, and choose:
+
+| Input | Default | Meaning |
+|---|---|---|
+| `environment` | `delivery` | Label recorded on the run; must match the Phase environment the target's facts come from |
+| `smoke` | off | Two-minute smoke catalog (`scenarios.smoke.json`) instead of the ~75-minute nightly workload |
+| `dry_run` | off | Measure and report, but publish nothing to `perf-data` (no record, no site deploy) |
+
+Or from a terminal with the GitHub CLI:
+
+```sh
+gh workflow run nightly.yml -R MonetizeKit/performance                       # full run, persisted and published
+gh workflow run nightly.yml -R MonetizeKit/performance -f smoke=true -f dry_run=true   # two-minute rehearsal
+gh run watch -R MonetizeKit/performance                                        # follow it
+```
+
+What to expect from a manual run:
+
+- It runs the whole pipeline — preflight, k6, collect, analyze, persist, report,
+  and the Pages deploy — exactly as the schedule does, and ignores the
+  `PERF_NIGHTLY_ENABLED` gate.
+- It is recorded with `trigger: dispatch`, so it is **judged against the nightly
+  baseline but never becomes part of it**: an afternoon run from a busy hour
+  cannot move the reference the next nightly is compared to.
+- It is published like any other run: a permanent page at
+  `<site>/run/<runId>.html`, a row on the trends dashboard, and the Slack and
+  email report.
+- It queues rather than overlapping. Two runs at once would share the tenant's
+  rate budget and measure each other, so a dispatch during the nightly waits
+  for it. The preflight also refuses to start while anything else is spending
+  the key (see `docs/methodology.md`, "The key must be idle").
+- A full run occupies the runner for about 80 minutes; use `smoke: true` to
+  check plumbing, not performance — smoke runs carry their own
+  `workloadVersion` and are never compared with nightlies.
+
+**Publish results** (Actions → Publish results → Run workflow) redeploys the
+site from whatever `perf-data` holds without measuring anything; use it after a
+Pages misconfiguration, never to "fix" a verdict.
+
 ### GitHub Pages
 
 The site is the `perf-data` branch, deployed by `.github/workflows/pages.yml`
