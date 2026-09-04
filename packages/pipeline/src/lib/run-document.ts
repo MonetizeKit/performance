@@ -12,15 +12,24 @@
  */
 
 /**
+ * 3: `slo-breach` is a run status of its own, and a scenario's `sloP95Ms` may be
+ *    resolved per run from a budget above the measured network floor
+ *    (`sloP95AboveFloorMs`, `floorP50Ms`).
  * 2: `changeSet.detail` discriminates how much attribution the run carries.
  * 1: the original shape, from when the harness lived beside the application.
  */
-export const RUN_DOCUMENT_SCHEMA_VERSION = 2;
+export const RUN_DOCUMENT_SCHEMA_VERSION = 3;
 
 /** Where a run came from. Ad-hoc runs are recorded but never form a baseline. */
 export type RunTrigger = "schedule" | "dispatch" | "local";
 
-export type RunStatus = "passed" | "regressed" | "failed";
+/**
+ * `regressed` means slower than the run's own baseline: something changed
+ * tonight. `slo-breach` means a target was missed with no such change: the
+ * system is where it has been, and that place is outside the promise. They
+ * call for different people, so they are never folded into one word.
+ */
+export type RunStatus = "passed" | "slo-breach" | "regressed" | "failed";
 
 export interface ScenarioMetrics {
   /** Milliseconds. */
@@ -37,7 +46,22 @@ export interface ScenarioMetrics {
   rps: number;
   /** Share of responses outside 2xx, in [0, 1]. */
   errorRate: number;
+  /**
+   * The p95 target this run was judged against, in milliseconds. Absolute for
+   * a scenario that declares `sloP95Ms`; otherwise resolved for this run as
+   * `floorP50Ms + sloP95AboveFloorMs`.
+   */
   sloP95Ms: number;
+  /**
+   * The budget above the network floor the catalog granted this scenario, when
+   * its SLO is expressed that way. Null for an absolute SLO.
+   */
+  sloP95AboveFloorMs: number | null;
+  /**
+   * The floor scenario's median latency in this run — what an empty request
+   * cost from where the run was measured. Null for an absolute SLO.
+   */
+  floorP50Ms: number | null;
   sloErrorRate: number;
   sloPass: boolean;
 }
@@ -96,6 +120,9 @@ export interface ScenarioComparison {
   /** `p95 / baselineP95`; null while the baseline is still forming. */
   ratio: number | null;
   sloP95Ms: number;
+  /** See `ScenarioMetrics.sloP95AboveFloorMs`. */
+  sloP95AboveFloorMs: number | null;
+  floorP50Ms: number | null;
   sloPass: boolean;
   verdict: ScenarioVerdict;
 }

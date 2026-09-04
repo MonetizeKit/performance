@@ -113,9 +113,11 @@ describe("baseline analysis", () => {
     expect(statusFrom(beyond, false)).toBe("regressed");
   });
 
-  it("ranks an SLO breach above a regression, whatever the baseline says", () => {
+  it("reports a regression ahead of an SLO breach: the regression is what changed", () => {
     const scenarios = {
-      "entitlement-check": metrics({ p95: 130, sloPass: false }),
+      // Over its target but flat against the baseline: a miss, not a change.
+      "entitlement-check": metrics({ p95: 115, sloP95Ms: 110, sloPass: false }),
+      // Under its target but half again slower than every recent night.
       "catalog-reads": metrics({ p95: 150, sloP95Ms: 200 }),
     };
     const document = runDocument({ scenarios });
@@ -133,9 +135,69 @@ describe("baseline analysis", () => {
     expect(analysis.scenarios[0]!.verdict).toBe("slo-breach");
     expect(analysis.scenarios[1]!.verdict).toBe("regressed");
     expect(offenders(analysis).map((scenario) => scenario.scenario)).toEqual([
-      "entitlement-check",
       "catalog-reads",
+      "entitlement-check",
     ]);
+    expect(statusFrom(analysis, false)).toBe("regressed");
+  });
+
+  it("calls a scenario that regressed and misses its SLO 'regressed', keeping the breach beside it", () => {
+    // Under the old rule a scenario already outside its SLO could double and
+    // still read "slo-breach": the change hid behind a verdict nobody was
+    // reading any more.
+    const scenarios = { "entitlement-check": metrics({ p95: 260, sloP95Ms: 120, sloPass: false }) };
+    const analysis = analyzeBaseline(
+      runDocument({ scenarios }),
+      Array.from({ length: MIN_BASELINE_RUNS }, (_unused, index) =>
+        historyEntry(runDocument({ scenarios }), {
+          runId: `night-${index}`,
+          timestamp: `2026-08-${String(10 + index).padStart(2, "0")}T02:00:00.000Z`,
+          p95: 130,
+        }),
+      ),
+    );
+
+    expect(analysis.scenarios[0]).toMatchObject({ verdict: "regressed", sloPass: false });
+    expect(offenders(analysis)).toHaveLength(1);
+  });
+
+  it("gives a run that missed a target without moving its own status, not 'regressed'", () => {
+    // The first nightly had nothing to regress from and reported REGRESSION
+    // for eight SLO misses. A miss with a flat (or absent) baseline is a
+    // different finding for a different person, and the status has to say so.
+    const scenarios = { "entitlement-check": metrics({ p95: 130, sloPass: false }) };
+    const document = runDocument({ scenarios });
+
+    const noHistory = analyzeBaseline(document, []);
+    expect(noHistory.scenarios[0]!.verdict).toBe("slo-breach");
+    expect(statusFrom(noHistory, false)).toBe("slo-breach");
+
+    const flat = analyzeBaseline(
+      document,
+      Array.from({ length: MIN_BASELINE_RUNS }, (_unused, index) =>
+        historyEntry(runDocument({ scenarios }), {
+          runId: `night-${index}`,
+          timestamp: `2026-08-${String(10 + index).padStart(2, "0")}T02:00:00.000Z`,
+          p95: 130,
+        }),
+      ),
+    );
+    expect(flat.scenarios[0]!.verdict).toBe("slo-breach");
+    expect(statusFrom(flat, false)).toBe("slo-breach");
+    expect(statusFrom(flat, true)).toBe("failed");
+  });
+
+  it("carries a floor-relative target through to the comparison", () => {
+    const analysis = analyzeBaseline(
+      runDocument({
+        scenarios: {
+          "entitlement-check": metrics({ p95: 170, sloP95Ms: 170, sloP95AboveFloorMs: 75, floorP50Ms: 95, sloPass: false }),
+        },
+      }),
+      [],
+    );
+
+    expect(analysis.scenarios[0]).toMatchObject({ sloP95Ms: 170, sloP95AboveFloorMs: 75, floorP50Ms: 95 });
   });
 
   it("takes the median of the trailing window and ignores older runs", () => {

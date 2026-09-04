@@ -10,13 +10,14 @@
  * that renders as a wall of unstyled text is a report nobody reads.
  */
 
-import { median, offenders } from "./baseline";
+import { median } from "./baseline";
 import type {
   ChangeSet,
   RunDocument,
   RunSummary,
   ScenarioComparison,
 } from "./run-document";
+import { STATUS_WORDS, describeSlo, headlineFor } from "./verdict";
 
 /** Trend windows, in runs. */
 const SHORT_TREND = 7;
@@ -83,44 +84,8 @@ export function computeTrends(input: ReportInput): ScenarioTrend[] {
 }
 
 export function subjectFor(document: RunDocument): string {
-  const label =
-    document.status === "passed"
-      ? "PASS"
-      : document.status === "regressed"
-        ? "REGRESSION"
-        : "RUN FAILED";
   const day = document.timestamp.slice(0, 10);
-  return `[MonetizeKit Perf] ${label} — ${document.environment} ${day}`;
-}
-
-/** One sentence saying what happened and why it matters. */
-function headline(document: RunDocument): string {
-  const regressed = document.baseline ? offenders(document.baseline) : [];
-
-  if (document.status === "failed") {
-    return (
-      "The run did not complete, so tonight's numbers are partial. "
-      + "The notes below say which scenarios produced no data."
-    );
-  }
-  if (regressed.length > 0) {
-    const worst = regressed[0]!;
-    const others = regressed.length > 1 ? ` (and ${regressed.length - 1} more)` : "";
-    return (
-      `${worst.scenario} is the worst of ${regressed.length} scenario(s) outside `
-      + `tolerance${others}: p95 ${ms(worst.p95)} against `
-      + `${worst.baselineP95 !== null ? `a ${ms(worst.baselineP95)} baseline` : "no baseline yet"} `
-      + `and a ${worst.sloP95Ms}ms SLO.`
-    );
-  }
-  if (document.baseline?.forming) {
-    return (
-      `Every scenario met its SLO. The baseline is still forming — `
-      + `${document.baseline.baselineRuns} comparable run(s) so far — so nothing is `
-      + "being compared against a median yet."
-    );
-  }
-  return "Every scenario met its SLO and stayed within tolerance of its baseline.";
+  return `[MonetizeKit Perf] ${STATUS_WORDS[document.status].subject} — ${document.environment} ${day}`;
 }
 
 function scenarioRows(
@@ -135,10 +100,10 @@ function scenarioRows(
       const metrics = document.scenarios[comparison.scenario];
       const trend = trendByScenario.get(comparison.scenario);
       const background =
-        comparison.verdict === "slo-breach"
-          ? "#fef2f2"
-          : comparison.verdict === "regressed"
-            ? "#fffbeb"
+        comparison.verdict === "regressed"
+          ? "#fffbeb"
+          : !comparison.sloPass
+            ? "#fef2f2"
             : "#ffffff";
 
       return `
@@ -147,7 +112,7 @@ function scenarioRows(
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">${ms(comparison.p95)}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">${comparison.baselineP95 !== null ? ms(comparison.baselineP95) : "—"}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">${percent(comparison.ratio)}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">${comparison.sloP95Ms}ms</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">${escapeHtml(describeSlo(comparison))}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">${metrics ? metrics.rps.toFixed(1) : "—"}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">${metrics ? `${(metrics.errorRate * 100).toFixed(2)}%` : "—"}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:12px;">${escapeHtml(trend ? arrow(comparison.p95, trend.shortMedian) : "—")}</td>
@@ -222,17 +187,19 @@ function changeSetHtml(changeSet: ChangeSet | null): string {
     ${compare}`;
 }
 
+const BANNER: Record<RunDocument["status"], { background: string; border: string; label: string }> = {
+  passed: { background: "#ecfdf5", border: "#10b981", label: STATUS_WORDS.passed.label },
+  "slo-breach": { background: "#fff7ed", border: "#f97316", label: STATUS_WORDS["slo-breach"].label },
+  regressed: { background: "#fffbeb", border: "#f59e0b", label: STATUS_WORDS.regressed.label },
+  failed: { background: "#fef2f2", border: "#ef4444", label: STATUS_WORDS.failed.label },
+};
+
 export function renderHtml(input: ReportInput): string {
   const { document, dashboardUrl, runUrl } = input;
   const comparisons = document.baseline?.scenarios ?? [];
   const trends = computeTrends(input);
 
-  const banner =
-    document.status === "passed"
-      ? { background: "#ecfdf5", border: "#10b981", label: "Pass" }
-      : document.status === "regressed"
-        ? { background: "#fffbeb", border: "#f59e0b", label: "Regression" }
-        : { background: "#fef2f2", border: "#ef4444", label: "Run failed" };
+  const banner = BANNER[document.status];
 
   const links = [
     dashboardUrl ? `<a href="${escapeHtml(dashboardUrl)}">Trends dashboard</a>` : null,
@@ -250,7 +217,7 @@ export function renderHtml(input: ReportInput): string {
       <div style="margin-top:4px;font-size:16px;font-weight:600;">${escapeHtml(document.environment)} &middot; ${escapeHtml(document.timestamp.slice(0, 16).replace("T", " "))} UTC</div>
     </div>
 
-    <p style="margin:18px 0 0;font-size:14px;line-height:1.55;">${escapeHtml(headline(document))}</p>
+    <p style="margin:18px 0 0;font-size:14px;line-height:1.55;">${escapeHtml(headlineFor(document))}</p>
 
     <table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:13px;">
       <thead>
@@ -301,7 +268,7 @@ export function renderText(input: ReportInput): string {
   const lines: string[] = [
     subjectFor(document),
     "",
-    headline(document),
+    headlineFor(document),
     "",
   ];
 
@@ -310,7 +277,7 @@ export function renderText(input: ReportInput): string {
       `  ${comparison.scenario.padEnd(26)} p95 ${ms(comparison.p95).padStart(8)}`
         + `  baseline ${(comparison.baselineP95 !== null ? ms(comparison.baselineP95) : "—").padStart(8)}`
         + `  ${percent(comparison.ratio).padStart(6)}`
-        + `  SLO ${String(comparison.sloP95Ms).padStart(5)}ms`
+        + `  SLO ${describeSlo(comparison)}`
         + `  ${comparison.verdict}`,
     );
   }

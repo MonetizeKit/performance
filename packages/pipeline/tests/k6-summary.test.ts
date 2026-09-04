@@ -108,3 +108,74 @@ describe("k6 summary normalization", () => {
     expect(breached.thresholdsBreached).toBe(true);
   });
 });
+
+describe("floor-relative SLOs", () => {
+  const floored = () =>
+    catalog({
+      floorScenario: "network-floor",
+      scenarios: [
+        {
+          ...catalog().scenarios[0]!,
+          name: "network-floor",
+          authenticated: false,
+          sloP95Ms: 250,
+        },
+        { ...catalog().scenarios[0]!, sloP95Ms: undefined, sloP95AboveFloorMs: 75 },
+      ],
+    });
+
+  function floorSummary(floorP50: number | null, checkP95: number) {
+    return {
+      metrics: {
+        ...(floorP50 !== null
+          ? {
+              latency_network_floor: {
+                type: "trend",
+                values: { ...TIMINGS, "p(50)": floorP50, "p(95)": floorP50 + 20 },
+              },
+              failed_network_floor: { type: "rate", values: { rate: 0, passes: 60, fails: 0 } },
+            }
+          : {}),
+        latency_entitlement_check: { type: "trend", values: { ...TIMINGS, "p(95)": checkP95 } },
+        failed_entitlement_check: { type: "rate", values: { rate: 0, passes: 600, fails: 0 } },
+      },
+    };
+  }
+
+  it("resolves the target for the run as the floor's median plus the budget", () => {
+    // 95ms to reach an empty route, 75ms of allowed work: a 136ms p95 from the
+    // same vantage is 41ms of API time, and passes.
+    const normalized = normalizeK6Summary(floorSummary(95.4, 136), floored());
+
+    expect(normalized.scenarios["entitlement-check"]).toMatchObject({
+      sloP95Ms: 170,
+      sloP95AboveFloorMs: 75,
+      floorP50Ms: 95.4,
+      sloPass: true,
+    });
+    expect(normalized.scenarios["network-floor"]).toMatchObject({
+      sloP95Ms: 250,
+      sloP95AboveFloorMs: null,
+      floorP50Ms: null,
+    });
+  });
+
+  it("judges the same API work the same from a nearer or farther vantage", () => {
+    // 310ms of p95 is a breach from 95ms away and a pass from 240ms away,
+    // because the API did 215ms of work in the first case and 70ms in the second.
+    const far = normalizeK6Summary(floorSummary(240, 310), floored());
+    const near = normalizeK6Summary(floorSummary(95, 310), floored());
+
+    expect(far.scenarios["entitlement-check"]!.sloPass).toBe(true);
+    expect(near.scenarios["entitlement-check"]!.sloPass).toBe(false);
+  });
+
+  it("reports a relative scenario as missing when the floor produced no data", () => {
+    // Passing or failing it against a number that was never resolved would be
+    // a verdict with nothing behind it.
+    const normalized = normalizeK6Summary(floorSummary(null, 136), floored());
+
+    expect(normalized.scenarios["entitlement-check"]).toBeUndefined();
+    expect(normalized.missing).toEqual(["network-floor", "entitlement-check"]);
+  });
+});

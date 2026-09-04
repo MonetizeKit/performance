@@ -23,6 +23,7 @@ import { DEFAULT_DOCUMENT, DEFAULT_STORE, display, userPath, userPathOr } from "
 import { renderHtml, renderText, subjectFor, type ReportInput } from "./lib/report";
 import { runDocumentPath, type RunDocument } from "./lib/run-document";
 import { runPagePath } from "./lib/run-page";
+import { exitMessageFor } from "./lib/verdict";
 import {
   buildSlackMessage,
   describeSlackDelivery,
@@ -48,7 +49,8 @@ Flags:
   --no-fetch             Use an existing store checkout as-is, without fetching
   --out <path>           Also write the rendered HTML here, for inspection
   --dry-run              Render only; do not send
-  --fail-on-regression   Exit non-zero when the run regressed or failed
+  --fail-on-regression   Exit non-zero unless the run passed (regression, SLO
+                         breach or run failure); the message says which
   --help
 
 Delivers to every configured channel. At least one is required unless --dry-run;
@@ -325,11 +327,7 @@ class PerfVerdictError extends Error {
     readonly status: RunDocument["status"],
     readonly report: unknown,
   ) {
-    super(
-      status === "failed"
-        ? "the performance run did not complete; see the report above."
-        : "the performance run regressed against its baseline; see the report above.",
-    );
+    super(exitMessageFor(status));
     this.name = "PerfVerdictError";
   }
 }

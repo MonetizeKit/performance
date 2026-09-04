@@ -227,7 +227,13 @@ function seriesCard(series: ScenarioSeries, breaks: readonly number[]): string {
 
 function runRow(run: RunSummary, links: Links): string {
   const colour =
-    run.status === "passed" ? "#059669" : run.status === "regressed" ? "#b45309" : "#b91c1c";
+    run.status === "passed"
+      ? "#059669"
+      : run.status === "regressed"
+        ? "#b45309"
+        : run.status === "slo-breach"
+          ? "#c2410c"
+          : "#b91c1c";
   const record = links.repositoryUrl
     ? `<a href="${escapeHtml(`${links.repositoryUrl}/blob/${links.branch}/${run.path}`)}" style="color:#2563eb;text-decoration:none;">record</a>`
     : "—";

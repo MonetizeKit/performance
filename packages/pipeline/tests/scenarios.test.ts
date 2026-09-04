@@ -11,11 +11,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   SCENARIOS_PATH,
+  SMOKE_SCENARIOS_PATH,
   durationSeconds,
+  isFloorRelative,
   loadScenarioCatalog,
   metricSuffix,
   peakRequestsPerMinute,
   requestsPerMinute,
+  validateSloDeclarations,
 } from "../src/lib/scenarios";
 
 import { catalog as catalogFixture } from "./support/fixtures";
@@ -58,13 +61,40 @@ describe("the committed scenario catalog", () => {
     }
   });
 
-  it("sets an SLO and an error budget on every scenario", () => {
+  it("sets exactly one p95 target and an error budget on every scenario", () => {
     for (const scenario of catalog.scenarios) {
-      expect(scenario.sloP95Ms, scenario.name).toBeGreaterThan(0);
+      const target = scenario.sloP95Ms ?? scenario.sloP95AboveFloorMs;
+      expect(target, scenario.name).toBeGreaterThan(0);
+      expect(
+        typeof scenario.sloP95Ms === "number" && typeof scenario.sloP95AboveFloorMs === "number",
+        `${scenario.name} declares both an absolute and a floor-relative target`,
+      ).toBe(false);
       expect(scenario.sloErrorRate, scenario.name).toBeGreaterThanOrEqual(0);
       expect(scenario.sloErrorRate, scenario.name).toBeLessThan(1);
       expect(scenario.description.length, scenario.name).toBeGreaterThan(20);
     }
+  });
+
+  it("judges every authenticated scenario on its work above a floor measured the same way", () => {
+    // A floor offered at a different concurrency measures cold starts rather
+    // than the network, so it has to share the authenticated scenarios' shape.
+    const floor = catalog.scenarios.find((scenario) => scenario.name === catalog.floorScenario);
+    expect(floor).toBeDefined();
+    expect(floor!.authenticated).toBe(false);
+    expect(typeof floor!.sloP95Ms).toBe("number");
+
+    const authenticated = catalog.scenarios.filter((scenario) => scenario.authenticated);
+    for (const scenario of authenticated) {
+      expect(isFloorRelative(scenario), scenario.name).toBe(true);
+      expect(requestsPerMinute(scenario), scenario.name).toBeLessThanOrEqual(requestsPerMinute(floor!));
+      expect(scenario.preAllocatedVUs, scenario.name).toBeLessThanOrEqual(floor!.preAllocatedVUs);
+    }
+    // ...and the floor has enough samples for its median to hold still.
+    expect(requestsPerMinute(floor!) * (durationSeconds(floor!.duration) / 60)).toBeGreaterThanOrEqual(60);
+  });
+
+  it("keeps the smoke catalog on the same rules", () => {
+    expect(() => loadScenarioCatalog(SMOKE_SCENARIOS_PATH)).not.toThrow();
   });
 
   it("describes a run that fits comfortably inside a nightly window", () => {
@@ -129,6 +159,74 @@ describe("the committed scenario catalog", () => {
   it("is the same file k6 opens, wherever the command is run from", () => {
     expect(SCENARIOS_PATH).toMatch(/[\\/]packages[\\/]api-workload[\\/]scenarios\.json$/);
     expect(isAbsolute(SCENARIOS_PATH)).toBe(true);
+  });
+});
+
+describe("SLO declarations", () => {
+  const floor = {
+    ...catalogFixture().scenarios[0]!,
+    name: "network-floor",
+    authenticated: false,
+    sloP95Ms: 250,
+  };
+  const relative = { ...catalogFixture().scenarios[0]!, sloP95Ms: undefined, sloP95AboveFloorMs: 75 };
+
+  it("accepts an absolute target, or a budget above a declared floor", () => {
+    expect(() => validateSloDeclarations(catalogFixture(), "test")).not.toThrow();
+    expect(() =>
+      validateSloDeclarations(
+        catalogFixture({ floorScenario: "network-floor", scenarios: [floor, relative] }),
+        "test",
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses a scenario with both targets, or with neither", () => {
+    expect(() =>
+      validateSloDeclarations(
+        catalogFixture({ scenarios: [{ ...relative, sloP95Ms: 120 }] }),
+        "test",
+      ),
+    ).toThrow(/exactly one of sloP95Ms/);
+    expect(() =>
+      validateSloDeclarations(
+        catalogFixture({ scenarios: [{ ...relative, sloP95AboveFloorMs: undefined }] }),
+        "test",
+      ),
+    ).toThrow(/neither/);
+  });
+
+  it("refuses a relative target with no floor to stand on", () => {
+    expect(() => validateSloDeclarations(catalogFixture({ scenarios: [relative] }), "test")).toThrow(
+      /names no floorScenario/,
+    );
+    expect(() =>
+      validateSloDeclarations(
+        catalogFixture({ floorScenario: "missing", scenarios: [relative] }),
+        "test",
+      ),
+    ).toThrow(/no such scenario/);
+  });
+
+  it("refuses a floor that is authenticated or itself relative", () => {
+    expect(() =>
+      validateSloDeclarations(
+        catalogFixture({
+          floorScenario: "network-floor",
+          scenarios: [{ ...floor, authenticated: true }, relative],
+        }),
+        "test",
+      ),
+    ).toThrow(/authenticated/);
+    expect(() =>
+      validateSloDeclarations(
+        catalogFixture({
+          floorScenario: "network-floor",
+          scenarios: [{ ...floor, sloP95Ms: undefined, sloP95AboveFloorMs: 10 }, relative],
+        }),
+        "test",
+      ),
+    ).toThrow(/absolute sloP95Ms/);
   });
 });
 

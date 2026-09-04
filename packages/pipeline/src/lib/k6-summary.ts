@@ -10,6 +10,7 @@
 
 import {
   durationSeconds,
+  isFloorRelative,
   metricSuffix,
   type ScenarioCatalog,
   type ScenarioDefinition,
@@ -51,10 +52,30 @@ function anyThresholdCrossed(metrics: Record<string, K6Metric>): boolean {
   return false;
 }
 
+/**
+ * The p95 target a scenario is judged against in this run.
+ *
+ * A floor-relative target is the floor scenario's median plus the budget: the
+ * floor is what an empty request cost from where the run was measured, so what
+ * is left is the API's own work. Rounded to whole milliseconds so the figure
+ * reads as a target rather than as a measurement.
+ */
+export function resolveSloP95Ms(scenario: ScenarioDefinition, floorP50Ms: number | null): number {
+  if (!isFloorRelative(scenario)) return scenario.sloP95Ms!;
+  if (floorP50Ms === null) {
+    throw new Error(
+      `scenario "${scenario.name}" has a floor-relative SLO but the run produced no floor `
+        + "measurement to resolve it from.",
+    );
+  }
+  return Math.round(floorP50Ms + scenario.sloP95AboveFloorMs!);
+}
+
 function normalizeScenario(
   scenario: ScenarioDefinition,
   latency: K6Metric,
   failures: K6Metric | undefined,
+  floorP50Ms: number | null,
 ): ScenarioMetrics {
   // A Rate is fed `true` on failure, so `rate` is the error rate and
   // `passes + fails` is the number of observations.
@@ -65,6 +86,8 @@ function normalizeScenario(
 
   const p95 = trendValue(latency, "p(95)");
   const window = durationSeconds(scenario.duration);
+  const relative = isFloorRelative(scenario);
+  const sloP95Ms = resolveSloP95Ms(scenario, floorP50Ms);
 
   return {
     avg: trendValue(latency, "avg"),
@@ -80,10 +103,24 @@ function normalizeScenario(
     // understate every one of them.
     rps: window > 0 ? Number((requests / window).toFixed(3)) : 0,
     errorRate,
-    sloP95Ms: scenario.sloP95Ms,
+    sloP95Ms,
+    sloP95AboveFloorMs: relative ? scenario.sloP95AboveFloorMs! : null,
+    floorP50Ms: relative ? floorP50Ms : null,
     sloErrorRate: scenario.sloErrorRate,
-    sloPass: p95 < scenario.sloP95Ms && errorRate <= scenario.sloErrorRate,
+    sloPass: p95 < sloP95Ms && errorRate <= scenario.sloErrorRate,
   };
+}
+
+/** The floor scenario's median in this run, or null when it produced no data. */
+function measuredFloor(
+  metrics: Record<string, K6Metric>,
+  catalog: ScenarioCatalog,
+): number | null {
+  if (!catalog.floorScenario) return null;
+  const latency = metrics[`latency_${metricSuffix(catalog.floorScenario)}`];
+  if (!latency) return null;
+  const p50 = latency.values?.["p(50)"] ?? latency.values?.med;
+  return typeof p50 === "number" && Number.isFinite(p50) ? p50 : null;
 }
 
 export function normalizeK6Summary(
@@ -93,6 +130,7 @@ export function normalizeK6Summary(
   const metrics = summary.metrics ?? {};
   const scenarios: Record<string, ScenarioMetrics> = {};
   const missing: string[] = [];
+  const floorP50Ms = measuredFloor(metrics, catalog);
 
   for (const scenario of catalog.scenarios) {
     const suffix = metricSuffix(scenario.name);
@@ -101,10 +139,18 @@ export function normalizeK6Summary(
       missing.push(scenario.name);
       continue;
     }
+    if (isFloorRelative(scenario) && floorP50Ms === null) {
+      // Data without a target it can be judged against is not a measurement
+      // the pipeline can stand behind; report it as missing rather than pass
+      // or fail it against a number that was never resolved.
+      missing.push(scenario.name);
+      continue;
+    }
     scenarios[scenario.name] = normalizeScenario(
       scenario,
       latency,
       metrics[`failed_${suffix}`],
+      floorP50Ms,
     );
   }
 
