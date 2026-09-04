@@ -95,12 +95,20 @@ jobs:
           k6-version: "1.4.0"
 
       # Pinned for the same reason as k6, and matched to the version the
-      # application repository pins so both read Phase the same way.
+      # application repository pins so both read Phase the same way. Skipped
+      # inside the step, not with `if:` — the `secrets` context is not available
+      # in a step condition, and using it there makes the whole workflow file
+      # invalid, which cancels the schedule silently (that is how the first
+      # nightly never ran).
       - name: Install the Phase CLI
-        if: ${{ secrets.PHASE_SERVICE_TOKEN != '' }}
         env:
+          PHASE_SERVICE_TOKEN: ${{ secrets.PHASE_SERVICE_TOKEN }}
           PHASE_CLI_VERSION: "2.0.0"
         run: |
+          if [ -z "$PHASE_SERVICE_TOKEN" ]; then
+            echo "PHASE_SERVICE_TOKEN is not set; perf:env will use the mirrored secrets only."
+            exit 0
+          fi
           curl -fsSL -o "$RUNNER_TEMP/phase" \
             "https://github.com/phasehq/cli/releases/download/v${PHASE_CLI_VERSION}/phase_cli_${PHASE_CLI_VERSION}_linux_amd64"
           chmod +x "$RUNNER_TEMP/phase"

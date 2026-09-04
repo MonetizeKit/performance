@@ -42,6 +42,15 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # A workflow file GitHub cannot parse does not fail loudly: the push shows
+      # a jobless red run and the schedule simply never fires. That is how the
+      # first nightly was lost (a `secrets` reference in a step `if`). actionlint
+      # applies the same context-availability rules GitHub does, here, on the PR.
+      - name: Lint workflow files
+        uses: raven-actions/actionlint@v2
+        with:
+          flags: -no-color
+
       # The k6 script is executed by k6's own runtime, not Node, so the only
       # honest syntax check is k6's. `--paused` compiles and initialises without
       # offering any load; the catalog is opened as the real run would open it.
