@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>delivery performance run 20260905T195404Z-1d7dlg</title>
+  <link rel="canonical" href="https://monetizekit.github.io/performance/run/20260905T195404Z-1d7dlg.html" />
+</head>
+<body style="margin:0;padding:28px 20px 64px;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111827;">
+  <div style="max-width:980px;margin:0 auto;">
+    <p style="margin:0 0 16px;font-size:13px;"><a href="../" style="color:#2563eb;text-decoration:none;">← All performance runs</a></p>
+
+    <div style="background:#fff7ed;border-left:4px solid #f97316;padding:14px 18px;border-radius:4px;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">SLO breach</div>
+      <h1 style="margin:6px 0 0;font-size:20px;">delivery · 2026-09-05 19:54 UTC</h1>
+      <div style="margin-top:4px;font-size:12px;color:#6b7280;font-family:ui-monospace,monospace;">20260905T195404Z-1d7dlg</div>
+    </div>
+
+    <p style="margin:18px 0 0;font-size:14px;line-height:1.55;">5 scenario(s) missed their SLO without moving against the baseline — a target miss, not a change since the last run. Worst: entitlement-check at p95 336ms against a 247ms (floor 172ms + 75ms) SLO.</p>
+
+    <div style="margin-top:24px;padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Citing this run</div>
+    <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#374151;">
+      MonetizeKit delivery, 2026-09-05,
+      build <code>1824545</code>: network-floor p95 230ms,
+      measured at up to 100 requests/minute
+      against dataset v2 with workload w2.
+    </p>
+    <p style="margin:8px 0 0;font-size:12px;"><a href="https://monetizekit.github.io/performance/run/20260905T195404Z-1d7dlg.html" style="color:#2563eb;word-break:break-all;">https://monetizekit.github.io/performance/run/20260905T195404Z-1d7dlg.html</a></p>
+    <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">
+      This URL is permanent. Run ids are timestamped and never reused, so a later run cannot change what this page says.
+    </p>
+  </div>
+
+    <h2 style="margin:32px 0 8px;font-size:16px;">Scenarios</h2>
+    <table style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+      <thead>
+        <tr style="text-align:left;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;background:#f9fafb;">
+          <th style="padding:8px 10px;">Scenario</th>
+          <th style="padding:8px 10px;text-align:right;">p95</th>
+          <th style="padding:8px 10px;text-align:right;">p50</th>
+          <th style="padding:8px 10px;text-align:right;">p99</th>
+          <th style="padding:8px 10px;text-align:right;">Baseline</th>
+          <th style="padding:8px 10px;text-align:right;">&Delta;</th>
+          <th style="padding:8px 10px;text-align:right;">SLO</th>
+          <th style="padding:8px 10px;text-align:right;">Requests</th>
+          <th style="padding:8px 10px;text-align:right;">Errors</th>
+          <th style="padding:8px 10px;">Verdict</th>
+        </tr>
+      </thead>
+      <tbody><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">network-floor</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">230ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">172ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">307ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">250ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">61</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">baseline-forming</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">platform-baseline</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">231ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">169ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">374ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">400ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">300</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">baseline-forming</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">entitlement-check</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">336ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">259ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">464ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">247ms (floor 172ms + 75ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">600</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#b91c1c;">slo-breach</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">entitlement-batch</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">344ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">265ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">442ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">322ms (floor 172ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">601</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#b91c1c;">slo-breach</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">customer-reads</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">343ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">254ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">504ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">372ms (floor 172ms + 200ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">601</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">baseline-forming</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">catalog-reads</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">343ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">241ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">559ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">322ms (floor 172ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">601</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#b91c1c;">slo-breach</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">usage-ingest</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">339ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">259ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">426ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">322ms (floor 172ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">601</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#b91c1c;">slo-breach</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">usage-ingest-backdated</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">337ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">257ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">433ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">322ms (floor 172ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">600</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#b91c1c;">slo-breach</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">usage-ingest-batch</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">1.21s</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">831ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">1.82s</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">—</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">1672ms (floor 172ms + 1500ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">100</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">baseline-forming</td>
+      </tr></tbody>
+    </table>
+
+    <h2 style="margin:32px 0 8px;font-size:16px;">What shipped since the last measured build</h2>
+      <p style="margin:0;font-size:13px;">The build moved from <code>8575a1f</code>. This site records what was measured; the commits that changed it live in the application repository: <a href="https://github.com/MonetizeKit/app-monetizekit-monorepo/compare/8575a1fc84cf544b951199fbb4614afccf096c78...18245457ca84854a87ec7966d062d2077c33905b" style="color:#2563eb;">full diff</a>.</p>
+
+    <h2 style="margin:32px 0 8px;font-size:16px;">Conditions</h2>
+    <table style="font-size:13px;color:#374151;">
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Build</td><td><code>18245457ca84854a87ec7966d062d2077c33905b</code></td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Target</td><td>https://app.monetizekit.delivery</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Dataset</td><td>v2</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Workload</td><td>w2 · k6 1.4.0</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Rate limit</td><td>100 requests/minute</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Trigger</td><td>dispatch</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Duration</td><td>4332s</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Baseline</td><td>median of 1 comparable run(s), still forming</td></tr>
+    </table>
+
+    <h2 style="margin:32px 0 8px;font-size:16px;">Notes</h2><ul style="margin:0;padding-left:18px;font-size:13px;color:#6b7280;"><li style="margin:3px 0;">gate-a-prime-pdx1-limiter-timeout</li><li style="margin:3px 0;">baseline forming: 1 comparable run(s) so far, so verdicts are informational until there are enough to take a median of.</li></ul>
+
+    <p style="margin:32px 0 0;font-size:12px;color:#9ca3af;">
+      <a href="../runs/delivery/2026-09-05-1824545-20260905T195404Z-1d7dlg.json" style="color:#2563eb;">Raw Run Document (JSON)</a> · Machine-written by <code>packages/pipeline/src/persist.ts</code>. Append-only: this run is never rewritten.
+    </p>
+  </div>
+</body>
+</html>

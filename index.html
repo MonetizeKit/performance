@@ -12,14 +12,14 @@
     <p style="margin:8px 0 0;font-size:13px;color:#6b7280;max-width:70ch;">
       p95 latency per scenario over the recorded nightlies, newest point on the right.
       Charts start at zero so ordinary jitter reads as jitter. Generated
-      2026-09-05 19:07 UTC from
+      2026-09-05 21:06 UTC from
       <code>index.ndjson</code> on <code>perf-data</code>.
     </p>
     <section style="margin-top:36px;">
     <h2 style="margin:0;font-size:18px;">delivery</h2>
     <p style="margin:6px 0 0;font-size:13px;color:#6b7280;">
-      4 run(s) plotted · latest 2026-09-05 17:54 UTC · workload w2.
-      <span style="color:#b91c1c;">6 scenario(s) missed their SLO on the latest run: network-floor, entitlement-check, entitlement-batch, usage-ingest, usage-ingest-backdated, usage-ingest-batch.</span>
+      5 run(s) plotted · latest 2026-09-05 19:54 UTC · workload w2.
+      <span style="color:#b91c1c;">5 scenario(s) missed their SLO on the latest run: entitlement-check, entitlement-batch, catalog-reads, usage-ingest, usage-ingest-backdated.</span>
       
     </p>
 
@@ -27,110 +27,110 @@
       <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">network-floor</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">301ms <span style="color:#9ca3af;">(+22%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">230ms <span style="color:#9ca3af;">(-24%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="network-floor p95 over the last 4 runs, peaking at 301ms">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="network-floor p95 over the last 5 runs, peaking at 301ms">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M108.0,24.6 L212.0,29.5 L316.0,15.5" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="108.0" cy="24.6" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="29.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="15.5" r="3" fill="#1d4ed8" />
+    <path d="M82.0,24.6 L160.0,29.5 L238.0,15.5 L316.0,33.6" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="82.0" cy="24.6" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="29.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="33.6" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      3 run(s) · worst 301ms · <span style="color:#b91c1c;">2 SLO breach(es)</span>
+      4 run(s) · worst 301ms · <span style="color:#b91c1c;">2 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">platform-baseline</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">255ms <span style="color:#9ca3af;">(-5%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">231ms <span style="color:#9ca3af;">(-9%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="platform-baseline p95 over the last 4 runs, peaking at 269ms">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="platform-baseline p95 over the last 5 runs, peaking at 269ms">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,22.3 L108.0,22.2 L212.0,15.5 L316.0,19.6" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="22.3" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="22.2" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="19.6" r="3" fill="#1d4ed8" />
+    <path d="M4.0,22.3 L82.0,22.2 L160.0,15.5 L238.0,19.6 L316.0,26.2" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="22.3" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="22.2" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="19.6" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="26.2" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 269ms · <span style="color:#b91c1c;">1 SLO breach(es)</span>
+      5 run(s) · worst 269ms · <span style="color:#b91c1c;">1 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">entitlement-check</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">346ms <span style="color:#9ca3af;">(-62%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">336ms <span style="color:#9ca3af;">(-3%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="entitlement-check p95 over the last 4 runs, peaking at 913ms">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="entitlement-check p95 over the last 5 runs, peaking at 913ms">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,80.6 L108.0,78.0 L212.0,15.5 L316.0,63.0" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="80.6" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="78.0" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="63.0" r="3" fill="#1d4ed8" />
+    <path d="M4.0,80.6 L82.0,78.0 L160.0,15.5 L238.0,63.0 L316.0,63.8" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="80.6" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="78.0" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="63.0" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="63.8" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 913ms · <span style="color:#b91c1c;">3 SLO breach(es)</span>
+      5 run(s) · worst 913ms · <span style="color:#b91c1c;">4 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">entitlement-batch</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">361ms <span style="color:#9ca3af;">(-65%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">344ms <span style="color:#9ca3af;">(-5%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="entitlement-batch p95 over the last 4 runs, peaking at 1.04s">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="entitlement-batch p95 over the last 5 runs, peaking at 1.04s">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,21.0 L108.0,18.6 L212.0,15.5 L316.0,65.5" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="21.0" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="18.6" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="65.5" r="3" fill="#1d4ed8" />
+    <path d="M4.0,21.0 L82.0,18.6 L160.0,15.5 L238.0,65.5 L316.0,66.8" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="21.0" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="18.6" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="65.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="66.8" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 1.04s · <span style="color:#b91c1c;">4 SLO breach(es)</span>
+      5 run(s) · worst 1.04s · <span style="color:#b91c1c;">5 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">customer-reads</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">358ms <span style="color:#9ca3af;">(-49%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">343ms <span style="color:#9ca3af;">(-4%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="customer-reads p95 over the last 4 runs, peaking at 709ms">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="customer-reads p95 over the last 5 runs, peaking at 709ms">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,24.7 L108.0,22.0 L212.0,15.5 L316.0,53.3" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="24.7" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="22.0" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="53.3" r="3" fill="#1d4ed8" />
+    <path d="M4.0,24.7 L82.0,22.0 L160.0,15.5 L238.0,53.3 L316.0,55.0" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="24.7" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="22.0" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="53.3" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="55.0" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 709ms · <span style="color:#b91c1c;">3 SLO breach(es)</span>
+      5 run(s) · worst 709ms · <span style="color:#b91c1c;">3 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">catalog-reads</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">322ms <span style="color:#9ca3af;">(-46%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">343ms <span style="color:#9ca3af;">(+6%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="catalog-reads p95 over the last 4 runs, peaking at 591ms">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="catalog-reads p95 over the last 5 runs, peaking at 591ms">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,29.3 L108.0,25.4 L212.0,15.5 L316.0,50.3" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="29.3" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="25.4" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="50.3" r="3" fill="#1d4ed8" />
+    <path d="M4.0,29.3 L82.0,25.4 L160.0,15.5 L238.0,50.3 L316.0,47.6" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="29.3" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="25.4" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="50.3" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="47.6" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 591ms · <span style="color:#b91c1c;">3 SLO breach(es)</span>
+      5 run(s) · worst 591ms · <span style="color:#b91c1c;">4 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">usage-ingest</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">340ms <span style="color:#9ca3af;">(-59%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">339ms <span style="color:#9ca3af;">(-0%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="usage-ingest p95 over the last 4 runs, peaking at 835ms">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="usage-ingest p95 over the last 5 runs, peaking at 835ms">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,25.5 L108.0,20.7 L212.0,15.5 L316.0,60.8" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="25.5" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="20.7" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="60.8" r="3" fill="#1d4ed8" />
+    <path d="M4.0,25.5 L82.0,20.7 L160.0,15.5 L238.0,60.8 L316.0,60.9" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="25.5" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="20.7" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="60.8" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="60.9" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 835ms · <span style="color:#b91c1c;">4 SLO breach(es)</span>
+      5 run(s) · worst 835ms · <span style="color:#b91c1c;">5 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">usage-ingest-backdated</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">347ms <span style="color:#9ca3af;">(-57%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">337ms <span style="color:#9ca3af;">(-3%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="usage-ingest-backdated p95 over the last 4 runs, peaking at 815ms">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="usage-ingest-backdated p95 over the last 5 runs, peaking at 815ms">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,22.0 L108.0,20.1 L212.0,15.5 L316.0,59.4" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="22.0" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="20.1" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="59.4" r="3" fill="#1d4ed8" />
+    <path d="M4.0,22.0 L82.0,20.1 L160.0,15.5 L238.0,59.4 L316.0,60.4" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="22.0" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="20.1" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="59.4" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="60.4" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 815ms · <span style="color:#b91c1c;">4 SLO breach(es)</span>
+      5 run(s) · worst 815ms · <span style="color:#b91c1c;">5 SLO breach(es)</span>
     </div>
   </div><div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#ffffff;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
       <code style="font-size:13px;color:#111827;">usage-ingest-batch</code>
-      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">5.78s <span style="color:#9ca3af;">(+129%)</span></span>
+      <span style="font-size:12px;color:#6b7280;font-variant-numeric:tabular-nums;">1.21s <span style="color:#9ca3af;">(-79%)</span></span>
     </div>
-    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="usage-ingest-batch p95 over the last 4 runs, peaking at 60.00s">
+    <div style="margin-top:8px;"><svg width="320" height="96" viewBox="0 0 320 96" role="img" aria-label="usage-ingest-batch p95 over the last 5 runs, peaking at 60.00s">
     <rect x="0" y="0" width="320" height="96" fill="#f9fafb" rx="4" />
-    <path d="M4.0,15.5 L108.0,89.1 L212.0,88.8 L316.0,84.6" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="108.0" cy="89.1" r="1.5" fill="#93c5fd" /><circle cx="212.0" cy="88.8" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="84.6" r="3" fill="#1d4ed8" />
+    <path d="M4.0,15.5 L82.0,89.1 L160.0,88.8 L238.0,84.6 L316.0,90.5" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linejoin="round" /><circle cx="4.0" cy="15.5" r="1.5" fill="#93c5fd" /><circle cx="82.0" cy="89.1" r="1.5" fill="#93c5fd" /><circle cx="160.0" cy="88.8" r="1.5" fill="#93c5fd" /><circle cx="238.0" cy="84.6" r="1.5" fill="#93c5fd" /><circle cx="316.0" cy="90.5" r="3" fill="#1d4ed8" />
   </svg></div>
     <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
-      4 run(s) · worst 60.00s · <span style="color:#b91c1c;">4 SLO breach(es)</span>
+      5 run(s) · worst 60.00s · <span style="color:#b91c1c;">4 SLO breach(es)</span>
     </div>
   </div>
     </div>
@@ -148,6 +148,13 @@
         </tr>
       </thead>
       <tbody><tr>
+    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#374151;white-space:nowrap;"><a href="run/20260905T195404Z-1d7dlg.html" style="color:#2563eb;text-decoration:none;">2026-09-05 19:54</a></td>
+    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#c2410c;">slo-breach</td>
+    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">dispatch</td>
+    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;"><a href="https://github.com/MonetizeKit/app-monetizekit-monorepo/commit/18245457ca84854a87ec7966d062d2077c33905b" style="color:#2563eb;text-decoration:none;font-family:ui-monospace,monospace;">1824545</a></td>
+    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">w2 / v2</td>
+    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;"><a href="run/20260905T195404Z-1d7dlg.html" style="color:#2563eb;text-decoration:none;">permalink</a> · <a href="https://github.com/MonetizeKit/performance/blob/perf-data/runs/delivery/2026-09-05-1824545-20260905T195404Z-1d7dlg.json" style="color:#2563eb;text-decoration:none;">record</a></td>
+  </tr><tr>
     <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#374151;white-space:nowrap;"><a href="run/20260905T175440Z-l7edxj.html" style="color:#2563eb;text-decoration:none;">2026-09-05 17:54</a></td>
     <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#c2410c;">slo-breach</td>
     <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">dispatch</td>
