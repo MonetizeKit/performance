@@ -13,6 +13,10 @@ what the numbers claim and what they do not. That document also explains why
 `entitlement-check` runs before 2026-09-05 are not comparable with later ones,
 and which scenarios are informational and never decide a run's verdict.
 
+**Improvement gates:** [docs/ledger/2026-09-engine-improvements.md](docs/ledger/2026-09-engine-improvements.md)
+tracks manually dispatched runs measured between engine performance changes,
+each linking its permanent run page.
+
 ## Why this is public
 
 We sell an API. Its latency is part of the product, so the measurements are

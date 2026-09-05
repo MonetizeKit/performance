@@ -31,6 +31,10 @@ on:
         description: Measure and report, but publish nothing to perf-data
         type: boolean
         default: false
+      label:
+        description: "Free-text note recorded in the run document, e.g. gate-a-pdx1"
+        type: string
+        default: ""
 
 # Two runs at once would share the tenant's rate budget and measure each other.
 # A queued run waits rather than being cancelled: a dispatch during the nightly
@@ -157,7 +161,17 @@ jobs:
       # load if not. A tenant that needs re-keying is the application
       # repository's job; this workflow reports the refusal rather than healing it.
       - name: Run k6 scenarios
-        run: pnpm perf:run ${{ inputs.smoke && '--smoke' || '' }}
+        env:
+          PERF_LABEL: ${{ inputs.label }}
+        run: |
+          args=()
+          if [ "${{ inputs.smoke }}" = "true" ]; then
+            args+=(--smoke)
+          fi
+          if [ -n "$PERF_LABEL" ]; then
+            args+=(--note "$PERF_LABEL")
+          fi
+          pnpm perf:run "${args[@]}"
 
       - name: Collect the Run Document
         run: pnpm perf:collect

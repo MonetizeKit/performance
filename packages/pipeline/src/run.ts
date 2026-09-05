@@ -22,6 +22,7 @@ import {
   userPathOr,
 } from "./lib/paths";
 import { resolveTrigger, writeRunContext } from "./lib/run-context";
+import { collectNotes } from "./lib/run-notes";
 import { newRunId } from "./lib/run-document";
 import {
   durationSeconds,
@@ -51,6 +52,8 @@ Flags:
   --skip-health      Do not preflight the target before offering load
   --allow-shared-key Start even if another client is spending the key's rate
                      budget (the run's notes will say so)
+  --note <text>      Free-text note recorded in the run document's notes,
+                     e.g. a gate label for a dispatched run
   --help
 
 Environment:
@@ -220,7 +223,7 @@ async function main() {
     k6Version: version,
     k6ExitCode: k6.status,
     summaryPath,
-    notes: sharedKeyNote ? [sharedKeyNote] : [],
+    notes: collectNotes(flags, sharedKeyNote),
   } as const;
 
   writeRunContext(contextPath, context);
