@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { parseFlags, progress, runCli } from "./lib/cli";
+import { type Flags, parseFlags, progress, runCli } from "./lib/cli";
 import {
   DEFAULT_CONTEXT,
   DEFAULT_SUMMARY,
@@ -51,6 +51,8 @@ Flags:
   --skip-health      Do not preflight the target before offering load
   --allow-shared-key Start even if another client is spending the key's rate
                      budget (the run's notes will say so)
+  --note <text>      Free-text note recorded in the run document's notes,
+                     e.g. a gate label for a dispatched run
   --help
 
 Environment:
@@ -100,6 +102,19 @@ async function checkRateBudgetIdle(
     process.stderr.write(`Warning: ${reason}\n  Continuing because --allow-shared-key was given.\n`);
     return `started with --allow-shared-key: ${reason}`;
   }
+}
+
+/**
+ * Notes recorded on the run: the shared-key warning, if the preflight was
+ * overridden, followed by any operator-supplied `--note`. Kept as a small
+ * pure function so the composition is testable without spawning k6.
+ */
+export function collectNotes(flags: Flags, sharedKeyNote: string | null): string[] {
+  const notes: string[] = [];
+  if (sharedKeyNote) notes.push(sharedKeyNote);
+  const note = flags.value("note");
+  if (note) notes.push(note);
+  return notes;
 }
 
 function k6Version(binary: string): string | null {
@@ -220,7 +235,7 @@ async function main() {
     k6Version: version,
     k6ExitCode: k6.status,
     summaryPath,
-    notes: sharedKeyNote ? [sharedKeyNote] : [],
+    notes: collectNotes(flags, sharedKeyNote),
   } as const;
 
   writeRunContext(contextPath, context);

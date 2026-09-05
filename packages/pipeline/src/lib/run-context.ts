@@ -37,6 +37,13 @@ export interface RunContext {
   k6Version: string | null;
   k6ExitCode: number | null;
   summaryPath: string;
+  /**
+   * Anything the operator wants told about this run before it is collected —
+   * a shared-key warning, or a free-text `--note` from a manual dispatch.
+   * Optional only because contexts written before this field existed are
+   * still readable.
+   */
+  notes?: string[];
 }
 
 export function writeRunContext(path: string, context: RunContext): void {
