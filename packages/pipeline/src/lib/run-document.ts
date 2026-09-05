@@ -18,7 +18,7 @@
  * 2: `changeSet.detail` discriminates how much attribution the run carries.
  * 1: the original shape, from when the harness lived beside the application.
  */
-export const RUN_DOCUMENT_SCHEMA_VERSION = 3;
+export const RUN_DOCUMENT_SCHEMA_VERSION = 4;
 
 /** Where a run came from. Ad-hoc runs are recorded but never form a baseline. */
 export type RunTrigger = "schedule" | "dispatch" | "local";
@@ -64,6 +64,12 @@ export interface ScenarioMetrics {
   floorP50Ms: number | null;
   sloErrorRate: number;
   sloPass: boolean;
+  /**
+   * True when the catalog marks the scenario informational (see
+   * `ScenarioDefinition.informational`): reported, never verdict-bearing.
+   * Absent in documents before schema version 4, which reads as false.
+   */
+  informational?: boolean;
 }
 
 export interface ChangeSetCommit {
@@ -111,7 +117,9 @@ export type ScenarioVerdict =
   | "regressed"
   | "slo-breach"
   | "baseline-forming"
-  | "missing";
+  | "missing"
+  /** Measured and reported, but by design never bearing on the run's status. */
+  | "informational";
 
 export interface ScenarioComparison {
   scenario: string;
@@ -124,6 +132,8 @@ export interface ScenarioComparison {
   sloP95AboveFloorMs: number | null;
   floorP50Ms: number | null;
   sloPass: boolean;
+  /** See `ScenarioMetrics.informational`. */
+  informational: boolean;
   verdict: ScenarioVerdict;
 }
 

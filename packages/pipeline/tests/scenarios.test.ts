@@ -160,6 +160,22 @@ describe("the committed scenario catalog", () => {
     expect(SCENARIOS_PATH).toMatch(/[\\/]packages[\\/]api-workload[\\/]scenarios\.json$/);
     expect(isAbsolute(SCENARIOS_PATH)).toBe(true);
   });
+
+  it("marks exactly the network floor and the platform baseline informational", () => {
+    // Everything else is API work and has to bear on the verdict.
+    for (const path of [SCENARIOS_PATH, SMOKE_SCENARIOS_PATH]) {
+      const loaded = loadScenarioCatalog(path);
+      const informational = loaded.scenarios
+        .filter((scenario) => scenario.informational)
+        .map((scenario) => scenario.name)
+        .sort();
+
+      expect(informational, path).toEqual(["network-floor", "platform-baseline"]);
+      for (const scenario of loaded.scenarios.filter((entry) => entry.authenticated)) {
+        expect(scenario.informational, scenario.name).not.toBe(true);
+      }
+    }
+  });
 });
 
 describe("SLO declarations", () => {
@@ -206,6 +222,19 @@ describe("SLO declarations", () => {
         "test",
       ),
     ).toThrow(/no such scenario/);
+  });
+
+  it("refuses an informational scenario that is authenticated", () => {
+    // An authenticated scenario measures API work by definition, so it cannot
+    // also be exempted from the run's verdict.
+    expect(() =>
+      validateSloDeclarations(
+        catalogFixture({
+          scenarios: [{ ...catalogFixture().scenarios[0]!, informational: true, authenticated: true }],
+        }),
+        "test",
+      ),
+    ).toThrow(/authenticated and cannot be informational/);
   });
 
   it("refuses a floor that is authenticated or itself relative", () => {

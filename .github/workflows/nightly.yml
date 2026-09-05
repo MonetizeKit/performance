@@ -4,9 +4,11 @@ name: Nightly performance run
 # tenant, records an immutable Run Document on the `perf-data` branch, judges it
 # against the rolling baseline, and reports to Slack and email.
 #
-# Runs at 04:00 UTC: the tenant's own refresh finishes well before then, so the
+# Runs at 04:17 UTC: the tenant's own refresh finishes well before then, so the
 # workload never shares its per-key rate budget with the seeder. (The refresh is
-# the application repository's job; see docs/methodology.md, "The tenant".)
+# the application repository's job; see docs/methodology.md, "The tenant".) Off
+# the hour on purpose — the top of the hour is GitHub's most contended schedule
+# slot and drifts the most; the first 04:00 run did not start until 08:02.
 #
 # Gated on the PERF_NIGHTLY_ENABLED repository variable so that forking this
 # repository does not start load-testing anything. A manual dispatch ignores the
@@ -14,7 +16,7 @@ name: Nightly performance run
 
 on:
   schedule:
-    - cron: "0 4 * * *"
+    - cron: "17 4 * * *"
   workflow_dispatch:
     inputs:
       environment:

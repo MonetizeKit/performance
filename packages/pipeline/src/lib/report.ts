@@ -102,7 +102,7 @@ function scenarioRows(
       const background =
         comparison.verdict === "regressed"
           ? "#fffbeb"
-          : !comparison.sloPass
+          : !comparison.sloPass && !comparison.informational
             ? "#fef2f2"
             : "#ffffff";
 

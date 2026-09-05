@@ -9,7 +9,9 @@ Every run has a permanent page; every number on it links to the immutable record
 it came from and to the build that produced it.
 
 **Method:** [docs/methodology.md](docs/methodology.md) — what is measured, how,
-what the numbers claim and what they do not.
+what the numbers claim and what they do not. That document also explains why
+`entitlement-check` runs before 2026-09-05 are not comparable with later ones,
+and which scenarios are informational and never decide a run's verdict.
 
 **Improvement gates:** [docs/ledger/2026-09-engine-improvements.md](docs/ledger/2026-09-engine-improvements.md)
 tracks manually dispatched runs measured between engine performance changes,
@@ -32,7 +34,7 @@ packages/
   pipeline/         run → collect → analyze → persist → report (Node, TypeScript)
 docs/methodology.md
 .github/workflows/
-  nightly.yml       04:00 UTC: measure, baseline, persist, report, then publish
+  nightly.yml       04:17 UTC: measure, baseline, persist, report, then publish
   pages.yml         deploy the perf-data branch as the site; called by the nightly
   ci.yml            typecheck, lint, unit tests, k6 compile check
 ```

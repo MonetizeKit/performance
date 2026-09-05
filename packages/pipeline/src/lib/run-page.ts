@@ -41,7 +41,7 @@ const STATUS_STYLE: Record<RunDocument["status"], { background: string; border: 
 function verdictColour(verdict: ScenarioComparison["verdict"]): string {
   if (verdict === "slo-breach") return "#b91c1c";
   if (verdict === "regressed") return "#b45309";
-  if (verdict === "baseline-forming") return "#6b7280";
+  if (verdict === "baseline-forming" || verdict === "informational") return "#6b7280";
   return "#059669";
 }
 
@@ -61,7 +61,8 @@ function scenarioRows(document: RunDocument): string {
         sloP95AboveFloorMs: metrics.sloP95AboveFloorMs ?? null,
         floorP50Ms: metrics.floorP50Ms ?? null,
         sloPass: metrics.sloPass,
-        verdict: "baseline-forming" as const,
+        informational: metrics.informational === true,
+        verdict: metrics.informational ? ("informational" as const) : ("baseline-forming" as const),
       }));
 
   return rows

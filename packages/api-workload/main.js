@@ -50,9 +50,13 @@ function underscore(name) {
 /** Per-scenario metrics, declared at init time as k6 requires. */
 const latency = {};
 const failures = {};
+const authenticatedScenario = {};
+// Authenticated responses that a shared cache answered instead of the API.
+const cdnHits = new Rate("cdn_hits_authenticated");
 for (const scenario of CONFIG.scenarios) {
   latency[scenario.name] = new Trend(`latency_${underscore(scenario.name)}`, true);
   failures[scenario.name] = new Rate(`failed_${underscore(scenario.name)}`);
+  authenticatedScenario[scenario.name] = scenario.authenticated === true;
 }
 
 function seconds(duration) {
@@ -75,6 +79,8 @@ function buildThresholds() {
     }
     thresholds[`failed_${underscore(scenario.name)}`] = [`rate<=${scenario.sloErrorRate}`];
   }
+  // No authenticated request may be answered by a shared cache.
+  thresholds.cdn_hits_authenticated = ["rate<=0"];
   return thresholds;
 }
 
@@ -127,10 +133,31 @@ function headers() {
   });
 }
 
-/** Record one response against its scenario's metrics. */
+/**
+ * Record one response against its scenario's metrics.
+ *
+ * An authenticated response served from a shared cache (`x-vercel-cache: HIT`)
+ * is the CDN answering, not the API: its timing says nothing about the work
+ * being measured, so it is counted as a failed observation rather than as a
+ * latency sample. The first nightly measured exactly that on the single
+ * entitlement check for 59 of every 60 requests, until the route stopped
+ * sending `Cache-Control: public`; this keeps that from ever happening quietly.
+ */
 function observe(scenarioName, response) {
+  const cacheHit = servedFromSharedCache(response);
+  const authenticated = authenticatedScenario[scenarioName] === true;
+  if (authenticated) cdnHits.add(cacheHit);
+  if (authenticated && cacheHit) {
+    failures[scenarioName].add(true);
+    return;
+  }
   latency[scenarioName].add(response.timings.duration);
   failures[scenarioName].add(response.status < 200 || response.status >= 300);
+}
+
+function servedFromSharedCache(response) {
+  const header = response.headers["X-Vercel-Cache"] || response.headers["x-vercel-cache"] || "";
+  return /^(HIT|STALE)$/i.test(String(header).trim());
 }
 
 // ---------------------------------------------------------------------------

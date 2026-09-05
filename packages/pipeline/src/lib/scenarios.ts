@@ -37,6 +37,14 @@ export interface ScenarioDefinition {
   sloP95AboveFloorMs?: number;
   sloErrorRate: number;
   writes: boolean;
+  /**
+   * True for scenarios that measure the platform or the runner's own network
+   * rather than the API: their numbers are recorded and charted, their target
+   * is still resolved and reported, but a miss or a regression on them never
+   * decides the run's verdict. Only an unauthenticated scenario may be
+   * informational — an authenticated one is, by definition, API work.
+   */
+  informational?: boolean;
 }
 
 export interface ScenarioCatalog {
@@ -76,6 +84,15 @@ export function validateSloDeclarations(catalog: ScenarioCatalog, path: string):
   const floor = catalog.floorScenario
     ? catalog.scenarios.find((scenario) => scenario.name === catalog.floorScenario)
     : undefined;
+
+  for (const scenario of catalog.scenarios) {
+    if (scenario.informational && scenario.authenticated) {
+      throw new Error(
+        `${path}: scenario "${scenario.name}" is authenticated and cannot be informational — `
+          + "an authenticated scenario measures API work and must bear on the verdict",
+      );
+    }
+  }
 
   if (catalog.floorScenario !== undefined) {
     if (!floor) {

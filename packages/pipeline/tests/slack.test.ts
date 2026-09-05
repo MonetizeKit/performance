@@ -38,6 +38,7 @@ function baseline(overrides: Partial<BaselineAnalysis> = {}): BaselineAnalysis {
         sloP95AboveFloorMs: null,
         floorP50Ms: null,
         sloPass: true,
+        informational: false,
         verdict: "pass",
       },
     ],
@@ -64,6 +65,7 @@ const REGRESSED = runDocument({
         sloP95AboveFloorMs: null,
         floorP50Ms: null,
         sloPass: true,
+        informational: false,
         verdict: "regressed",
       },
       {
@@ -75,6 +77,7 @@ const REGRESSED = runDocument({
         sloP95AboveFloorMs: null,
         floorP50Ms: null,
         sloPass: false,
+        informational: false,
         verdict: "slo-breach",
       },
     ],
@@ -128,6 +131,7 @@ describe("slackHeadline", () => {
               sloP95AboveFloorMs: 150,
               floorP50Ms: 95,
               sloPass: false,
+              informational: false,
               verdict: "slo-breach",
             },
           ],
@@ -253,6 +257,7 @@ describe("buildSlackMessage", () => {
           sloP95AboveFloorMs: null,
           floorP50Ms: null,
           sloPass: true,
+          informational: false,
           verdict: "pass" as const,
         })),
       }),
@@ -270,6 +275,53 @@ describe("buildSlackMessage", () => {
     for (const block of message.blocks as { text?: { text?: string } }[]) {
       if (block.text?.text) expect(block.text.text.length).toBeLessThanOrEqual(3000);
     }
+  });
+});
+
+describe("informational scenarios", () => {
+  it("lists an informational SLO miss without flagging it as a breach", () => {
+    const document = runDocument({
+      scenarios: {
+        "network-floor": metrics({ p95: 200, sloP95Ms: 100, sloPass: false, informational: true }),
+        "entitlement-check": metrics({ p95: 100, sloP95Ms: 120 }),
+      },
+      baseline: baseline({
+        scenarios: [
+          {
+            scenario: "network-floor",
+            p95: 200,
+            baselineP95: 190,
+            ratio: 1.05,
+            sloP95Ms: 100,
+            sloP95AboveFloorMs: null,
+            floorP50Ms: null,
+            sloPass: false,
+            informational: true,
+            verdict: "informational",
+          },
+          {
+            scenario: "entitlement-check",
+            p95: 100,
+            baselineP95: 96,
+            ratio: 1.04,
+            sloP95Ms: 120,
+            sloP95AboveFloorMs: null,
+            floorP50Ms: null,
+            sloPass: true,
+            informational: false,
+            verdict: "pass",
+          },
+        ],
+      }),
+    });
+
+    const message = build(document);
+    const table = JSON.stringify(message.blocks);
+
+    expect(message.text).toBe("Pass — delivery performance 2026-08-30");
+    expect(table).not.toContain("!! network-floor");
+    expect(table).not.toContain(" ! network-floor");
+    expect(table).toContain("   network-floor");
   });
 });
 

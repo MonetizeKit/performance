@@ -87,7 +87,13 @@ function verdictFor(
   ratio: number | null,
   sloPass: boolean,
   forming: boolean,
+  informational: boolean,
 ): ScenarioVerdict {
+  // An informational scenario (the network floor, the platform baseline) is
+  // measured and shown beside the rest, but it describes where the run was
+  // measured from, not the API — so it carries no verdict of its own.
+  if (informational) return "informational";
+
   // A regression is judged first, because it is the news: something moved
   // tonight. A scenario that has sat outside its SLO for a month and then
   // doubles must say "regressed", or the doubling hides behind a verdict the
@@ -135,7 +141,15 @@ export function analyzeBaseline(
         sloP95AboveFloorMs: metrics.sloP95AboveFloorMs ?? null,
         floorP50Ms: metrics.floorP50Ms ?? null,
         sloPass: metrics.sloPass,
-        verdict: verdictFor(metrics.p95, baselineP95, ratio, metrics.sloPass, forming),
+        informational: metrics.informational === true,
+        verdict: verdictFor(
+          metrics.p95,
+          baselineP95,
+          ratio,
+          metrics.sloPass,
+          forming,
+          metrics.informational === true,
+        ),
       };
     },
   );
@@ -163,8 +177,9 @@ export function statusFrom(
   runFailed: boolean,
 ): RunStatus {
   if (runFailed) return "failed";
-  if (analysis.scenarios.some((scenario) => scenario.verdict === "regressed")) return "regressed";
-  if (analysis.scenarios.some((scenario) => !scenario.sloPass)) return "slo-breach";
+  const judged = analysis.scenarios.filter((scenario) => !scenario.informational);
+  if (judged.some((scenario) => scenario.verdict === "regressed")) return "regressed";
+  if (judged.some((scenario) => !scenario.sloPass)) return "slo-breach";
   return "passed";
 }
 
@@ -179,9 +194,13 @@ export function offenders(analysis: BaselineAnalysis): ScenarioComparison[] {
     "baseline-forming": 2,
     missing: 3,
     pass: 4,
+    informational: 5,
   };
   return [...analysis.scenarios]
-    .filter((scenario) => scenario.verdict === "regressed" || !scenario.sloPass)
+    .filter(
+      (scenario) =>
+        !scenario.informational && (scenario.verdict === "regressed" || !scenario.sloPass),
+    )
     .sort((left, right) => {
       const byVerdict = rank[left.verdict] - rank[right.verdict];
       if (byVerdict !== 0) return byVerdict;

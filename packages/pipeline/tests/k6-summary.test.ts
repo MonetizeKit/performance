@@ -109,6 +109,32 @@ describe("k6 summary normalization", () => {
   });
 });
 
+describe("informational scenarios", () => {
+  it("carries the catalog's informational flag onto the scenario's metrics", () => {
+    const withFloor = catalog({
+      floorScenario: "network-floor",
+      scenarios: [
+        { ...catalog().scenarios[0]!, name: "network-floor", authenticated: false, sloP95Ms: 250, informational: true },
+        catalog().scenarios[0]!,
+      ],
+    });
+    const normalized = normalizeK6Summary(
+      {
+        metrics: {
+          latency_network_floor: { type: "trend", values: TIMINGS },
+          failed_network_floor: { type: "rate", values: { rate: 0, passes: 60, fails: 0 } },
+          latency_entitlement_check: { type: "trend", values: TIMINGS },
+          failed_entitlement_check: { type: "rate", values: { rate: 0, passes: 600, fails: 0 } },
+        },
+      },
+      withFloor,
+    );
+
+    expect(normalized.scenarios["network-floor"]!.informational).toBe(true);
+    expect(normalized.scenarios["entitlement-check"]!.informational).toBe(false);
+  });
+});
+
 describe("floor-relative SLOs", () => {
   const floored = () =>
     catalog({

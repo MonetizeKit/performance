@@ -88,6 +88,27 @@ describe("trends", () => {
   });
 });
 
+describe("informational scenarios", () => {
+  it("lists an informational SLO miss without marking it a breach", () => {
+    const input = report(
+      runDocument({
+        scenarios: {
+          "network-floor": metrics({ p95: 200, sloP95Ms: 100, sloPass: false, informational: true }),
+          "entitlement-check": metrics({ p95: 100, sloP95Ms: 120 }),
+        },
+      }),
+    );
+
+    const html = renderHtml(input);
+
+    expect(input.document.status).toBe("passed");
+    expect(html).toContain("network-floor");
+    expect(html).toContain("informational");
+    // The breach background (#fef2f2) marks only a non-informational miss.
+    expect(html).not.toContain('style="background:#fef2f2;');
+  });
+});
+
 describe("rendered report", () => {
   it("leads with the worst offender and names the number and the SLO", () => {
     const input = report(

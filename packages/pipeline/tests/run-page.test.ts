@@ -45,6 +45,7 @@ describe("renderRunPage", () => {
           sloP95AboveFloorMs: null,
           floorP50Ms: null,
           sloPass: true,
+          informational: false,
           verdict: "pass",
         },
       ],

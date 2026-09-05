@@ -108,6 +108,7 @@ function normalizeScenario(
     floorP50Ms: relative ? floorP50Ms : null,
     sloErrorRate: scenario.sloErrorRate,
     sloPass: p95 < sloP95Ms && errorRate <= scenario.sloErrorRate,
+    informational: scenario.informational === true,
   };
 }
 

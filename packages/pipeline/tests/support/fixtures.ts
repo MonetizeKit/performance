@@ -30,6 +30,7 @@ export function metrics(overrides: Partial<ScenarioMetrics> = {}): ScenarioMetri
     sloP95Ms: 120,
     sloP95AboveFloorMs: null,
     floorP50Ms: null,
+    informational: false,
     sloErrorRate: 0.001,
     sloPass: true,
     ...overrides,

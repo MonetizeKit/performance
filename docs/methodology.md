@@ -69,6 +69,21 @@ slow is a platform finding in its own right, and `platform-baseline` offers ten
 concurrent requests to catch cold-start and concurrency behaviour that a floor
 measured one request at a time would not see.
 
+### Informational scenarios carry no verdict
+
+`network-floor` and `platform-baseline` are marked `"informational": true` in
+the catalog. They are measured every night like anything else, charted beside
+the authenticated scenarios, and their own targets are still resolved and
+reported — but a miss or a regression on either never decides the run's status.
+That is by design, not an oversight: both describe where the run was measured
+*from* — the GitHub Actions runner's own network and the platform's cold-start
+behaviour — not the API being sold. A slow floor is worth knowing about, which
+is why it is still shown; it is not evidence that the API got slower, which is
+why it cannot turn a run `regressed` or `slo-breach` on its own. Only an
+unauthenticated scenario may be informational — an authenticated one is, by
+definition, API work, and `validateSloDeclarations` refuses a catalog that
+marks one informational.
+
 ### SLO hypotheses
 
 The budgets are hypotheses to be confirmed against the first baselines, not
@@ -336,3 +351,24 @@ says so. Re-keying is the application repository's job; this one measures.
   read it first when every scenario moves at once.
 - Percentiles are k6's, over the scenario's own window; p99 on 600 samples
   rests on six observations and is reported but not judged.
+
+## Note (2026-09-05): entitlement-check before the private cache header
+
+Until the application's single-feature entitlement route stopped sending
+`Cache-Control: public` (it now sends `private`), `entitlement-check` was
+measuring the Vercel CDN, not the API. The first nightly run
+([`20260905T080237Z-2dso5p`](https://monetizekit.github.io/performance/run/20260905T080237Z-2dso5p.html))
+saw `x-vercel-cache: HIT` on 59 of every 60 requests, and its p50 (112ms) sat
+*below* the unauthenticated network floor — an authenticated, per-key check
+answering faster than an empty unauthenticated route is only possible if
+something other than the API is answering. Values of `entitlement-check` from
+runs before the header change are not comparable with runs after it; treat the
+boundary the same way a `workloadVersion` bump is treated, even though this one
+carries no bump of its own since the workload's declared shape did not change.
+
+The workload now refuses to let this happen quietly. `main.js` tracks a
+`cdn_hits_authenticated` Rate metric with threshold `rate<=0`, and any
+authenticated response carrying `x-vercel-cache: HIT` or `STALE` is counted as
+a failed observation rather than as a latency sample — so a shared cache
+answering on behalf of the API turns the run red instead of turning in a
+suspiciously good number.
