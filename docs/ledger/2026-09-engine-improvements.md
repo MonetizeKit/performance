@@ -11,6 +11,7 @@ baseline but never enter it.
 | 0 (baseline) | `962132f` | [run](https://monetizekit.github.io/performance/run/20260905T161348Z-ve1uio.html) | 202 / 246 | 201 / 269 | 815 / 913 | 946 / 1044 | 622 / 709 | 468 / 591 | 718 / 835 | 715 / 815 | 1954 / 2523 |
 | A (pdx1) | `8575a1f` | [run](https://monetizekit.github.io/performance/run/20260905T175440Z-l7edxj.html) | 180 / 301 | 178 / 255 | 268 / 346 | 278 / 361 | 262 / 358 | 245 / 322 | 265 / 340 | 265 / 347 | 854 / 5782 |
 | A′ (pdx1 + limiter timeout) | `1824545` | [run](https://monetizekit.github.io/performance/run/20260905T195404Z-1d7dlg.html) | 172 / 230 | 169 / 231 | 259 / 336 | 265 / 344 | 254 / 343 | 241 / 343 | 259 / 339 | 257 / 337 | 831 / 1214 |
+| B (audit index + after) | `46718d2` | [run](https://monetizekit.github.io/performance/run/20260905T211614Z-ifjakq.html) | 181 / 235 | 175 / 249 | 229 / 307 | 234 / 317 | 222 / 300 | 208 / 278 | 225 / 314 | 229 / 299 | 789 / 1137 |
 
 > entitlement-check in the pre-0 row measured the Vercel CDN, not the API: the
 > route sent `Cache-Control: public, max-age=60` at the time and 59 of every 60
@@ -121,6 +122,61 @@ p95 versus Gate 0 and Gate A:
   at Gate A was also partly the same hang reaching the unauthenticated path
   through shared instances, not only geometry. Read the floor across several
   nights before drawing conclusions from it.
+
+### Gate B — audit index and bookkeeping after the response (`46718d2`, 2026-09-05 21:16 UTC)
+
+Build: Gate A′ plus app-monetizekit-monorepo #401: a
+`(workspaceId, createdAt DESC, id DESC)` index on `audit_log_entries` so the
+hash-chain trigger's previous-hash lookup is an index probe, and the per-request
+bookkeeping (`recordApiCall`, `lastUsedAt`, `markFirstApiCall`) moved into
+`next/server`'s `after()` so it runs once the response is sent instead of on
+the critical path.
+
+The trigger query on Delivery, `EXPLAIN (ANALYZE, BUFFERS)` for the demo
+workspace, before and after the index:
+
+| | Plan | Rows scanned | Buffers | Execution |
+| --- | --- | --- | --- | --- |
+| before (54,978 rows in the workspace) | Seq Scan + top-N heapsort | 54,978 | 3,650 shared hits | 37.9 ms |
+| after (63,992 rows) | Index Scan on `audit_log_entries_workspaceId_createdAt_id_idx` | 1 | 4 shared hits | 0.049 ms |
+
+That cost was paid, under a per-workspace advisory lock, on every API call, and
+it grew with the very traffic being measured (the table gained 9,000 rows
+between the two plans, most of them public-API call records).
+
+p95 versus Gate A′:
+
+| Scenario | Gate 0 | Gate A′ | Gate B | Δ vs A′ | Δ vs 0 | p50 A′ → B |
+| --- | --- | --- | --- | --- | --- | --- |
+| entitlement-check | 913 | 336 | 307 | −9 % | −66 % | 259 → 229 |
+| entitlement-batch | 1044 | 344 | 317 | −8 % | −70 % | 265 → 234 |
+| customer-reads | 709 | 343 | 300 | −13 % | −58 % | 254 → 222 |
+| catalog-reads | 591 | 343 | 278 | −19 % | −53 % | 241 → 208 |
+| usage-ingest | 835 | 339 | 314 | −8 % | −62 % | 259 → 225 |
+| usage-ingest-backdated | 815 | 337 | 299 | −11 % | −63 % | 257 → 229 |
+| usage-ingest-batch | 2523 | 1214 | 1137 | −6 % | −55 % | 831 → 789 |
+| network-floor | 246 | 230 | 235 | +2 % | −5 % | 172 → 181 |
+| platform-baseline | 269 | 231 | 249 | +7 % | −8 % | 169 → 175 |
+
+- **Gate rule: passed.** Every authenticated scenario improved at p95; nothing
+  is worse than Gate A′ beyond the rule (platform-baseline +17 ms / +7 % is
+  inside it, and it is the unauthenticated floor — the build changed nothing
+  on that path).
+- The two read scenarios the phase targeted moved the most, as expected:
+  catalog-reads −64 ms and customer-reads −43 ms at p95. Their handlers do the
+  least work of any scenario, so the fixed per-request overhead was the largest
+  share of their time.
+- Authenticated p50s now sit 27–53 ms above the floor (208–234 ms against a
+  181 ms floor), down from 65–100 ms at Gate A′ and roughly 400–750 ms at
+  Gate 0.
+- Status `slo-breach`, but only one scenario: entitlement-check at 307 ms p95
+  against a floor-relative target of 256 ms. Seven of eight authenticated
+  scenarios now pass their SLO (Gate 0: one of eight).
+- One outlier: entitlement-batch max 3518 ms on a single request (p99 534 ms).
+  The other maxes are 1.2–1.8 s, the bounded limiter timeout shape described
+  at Gate A′. One sample; watch for it at Gate C rather than explain it now.
+- The pipeline's own attribution for this run is the compare link
+  `1824545...46718d2`, which is exactly #401.
 
 ## How to read a row
 
