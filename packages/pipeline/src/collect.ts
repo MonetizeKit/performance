@@ -77,7 +77,7 @@ async function main() {
   const summary = JSON.parse(readFileSync(summaryPath, "utf8")) as K6Summary;
   const normalized = normalizeK6Summary(summary, catalog);
 
-  const notes: string[] = [];
+  const notes: string[] = [...(context.notes ?? [])];
   if (normalized.missing.length > 0) {
     notes.push(
       `k6 produced no data for ${normalized.missing.join(", ")}; `

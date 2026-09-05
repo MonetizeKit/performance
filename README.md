@@ -11,6 +11,10 @@ it came from and to the build that produced it.
 **Method:** [docs/methodology.md](docs/methodology.md) — what is measured, how,
 what the numbers claim and what they do not.
 
+**Improvement gates:** [docs/ledger/2026-09-engine-improvements.md](docs/ledger/2026-09-engine-improvements.md)
+tracks manually dispatched runs measured between engine performance changes,
+each linking its permanent run page.
+
 ## Why this is public
 
 We sell an API. Its latency is part of the product, so the measurements are
