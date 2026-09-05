@@ -50,14 +50,16 @@ export function exitMessageFor(status: RunStatus): string {
   }
 }
 
-/** "245ms (floor 95ms + 150ms)" or "400ms". */
+/** "245ms (floor 95ms + 150ms)", "400ms", or "400ms, informational". */
 export function describeSlo(
-  comparison: Pick<ScenarioComparison, "sloP95Ms" | "sloP95AboveFloorMs" | "floorP50Ms">,
+  comparison: Pick<ScenarioComparison, "sloP95Ms" | "sloP95AboveFloorMs" | "floorP50Ms"> &
+    Partial<Pick<ScenarioComparison, "informational">>,
 ): string {
+  const note = comparison.informational ? ", informational" : "";
   if (comparison.sloP95AboveFloorMs === null || comparison.floorP50Ms === null) {
-    return `${comparison.sloP95Ms}ms`;
+    return `${comparison.sloP95Ms}ms${note}`;
   }
-  return `${comparison.sloP95Ms}ms (floor ${ms(comparison.floorP50Ms)} + ${comparison.sloP95AboveFloorMs}ms)`;
+  return `${comparison.sloP95Ms}ms (floor ${ms(comparison.floorP50Ms)} + ${comparison.sloP95AboveFloorMs}ms)${note}`;
 }
 
 export interface HeadlineOptions {

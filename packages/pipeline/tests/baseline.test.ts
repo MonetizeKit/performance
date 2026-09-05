@@ -243,6 +243,67 @@ describe("baseline analysis", () => {
   });
 });
 
+describe("informational scenarios", () => {
+  it("carries no verdict of its own, is excluded from offenders, and does not move the status", () => {
+    const scenarios = {
+      "network-floor": metrics({ p95: 200, sloP95Ms: 100, sloPass: false, informational: true }),
+      "entitlement-check": metrics({ p95: 100, sloP95Ms: 120 }),
+    };
+    const document = runDocument({ scenarios });
+    const analysis = analyzeBaseline(
+      document,
+      Array.from({ length: MIN_BASELINE_RUNS }, (_unused, index) =>
+        historyEntry(runDocument({ scenarios }), {
+          runId: `night-${index}`,
+          timestamp: `2026-08-${String(10 + index).padStart(2, "0")}T02:00:00.000Z`,
+          p95: 100,
+        }),
+      ),
+    );
+
+    const floor = analysis.scenarios.find((scenario) => scenario.scenario === "network-floor")!;
+    expect(floor.verdict).toBe("informational");
+    expect(offenders(analysis).map((scenario) => scenario.scenario)).not.toContain("network-floor");
+    expect(statusFrom(analysis, false)).toBe("passed");
+  });
+
+  it("does not swallow a non-informational SLO breach in the same run", () => {
+    const scenarios = {
+      "network-floor": metrics({ p95: 200, sloP95Ms: 100, sloPass: false, informational: true }),
+      "catalog-reads": metrics({ p95: 300, sloP95Ms: 200, sloPass: false }),
+    };
+    const document = runDocument({ scenarios });
+    const analysis = analyzeBaseline(document, nightlies(MIN_BASELINE_RUNS, 100));
+
+    const breach = analysis.scenarios.find((scenario) => scenario.scenario === "catalog-reads")!;
+    expect(breach.verdict).toBe("slo-breach");
+    expect(offenders(analysis).map((scenario) => scenario.scenario)).toEqual(["catalog-reads"]);
+    expect(statusFrom(analysis, false)).toBe("slo-breach");
+  });
+
+  it("carries no verdict even when its p95 doubles against its own baseline", () => {
+    const scenarios = {
+      "network-floor": metrics({ p95: 200, sloP95Ms: 100, sloPass: false, informational: true }),
+    };
+    const document = runDocument({ scenarios });
+    const analysis = analyzeBaseline(
+      document,
+      Array.from({ length: MIN_BASELINE_RUNS }, (_unused, index) =>
+        historyEntry(runDocument({ scenarios: { "network-floor": metrics({ p95: 100 }) } }), {
+          runId: `night-${index}`,
+          timestamp: `2026-08-${String(10 + index).padStart(2, "0")}T02:00:00.000Z`,
+          p95: 100,
+        }),
+      ),
+    );
+
+    expect(analysis.scenarios[0]!.ratio).toBeGreaterThanOrEqual(2);
+    expect(analysis.scenarios[0]!.verdict).toBe("informational");
+    expect(offenders(analysis)).toEqual([]);
+    expect(statusFrom(analysis, false)).toBe("passed");
+  });
+});
+
 describe("the absolute floor on a regression", () => {
   it("ignores a large ratio that is a small number of milliseconds", () => {
     // Observed for real: an unauthenticated read went 12ms to 17ms across a

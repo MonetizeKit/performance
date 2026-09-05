@@ -64,7 +64,8 @@ function table(comparisons: readonly ScenarioComparison[]): string {
 
   const lines = rows.map((row) => {
     // "!!" a regression (something changed), " !" an SLO miss with no movement.
-    const flag = row.verdict === "regressed" ? "!!" : !row.sloPass ? " !" : "  ";
+    const flag =
+      row.verdict === "regressed" ? "!!" : !row.sloPass && !row.informational ? " !" : "  ";
     return (
       `${flag} ${row.scenario.padEnd(width)}  `
       + `${ms(row.p95).padStart(8)}  `
