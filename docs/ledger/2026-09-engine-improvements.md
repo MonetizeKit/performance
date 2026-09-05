@@ -12,6 +12,7 @@ baseline but never enter it.
 | A (pdx1) | `8575a1f` | [run](https://monetizekit.github.io/performance/run/20260905T175440Z-l7edxj.html) | 180 / 301 | 178 / 255 | 268 / 346 | 278 / 361 | 262 / 358 | 245 / 322 | 265 / 340 | 265 / 347 | 854 / 5782 |
 | A′ (pdx1 + limiter timeout) | `1824545` | [run](https://monetizekit.github.io/performance/run/20260905T195404Z-1d7dlg.html) | 172 / 230 | 169 / 231 | 259 / 336 | 265 / 344 | 254 / 343 | 241 / 343 | 259 / 339 | 257 / 337 | 831 / 1214 |
 | B (audit index + after) | `46718d2` | [run](https://monetizekit.github.io/performance/run/20260905T211614Z-ifjakq.html) | 181 / 235 | 175 / 249 | 229 / 307 | 234 / 317 | 222 / 300 | 208 / 278 | 225 / 314 | 229 / 299 | 789 / 1137 |
+| C (query reduction) | `0952c11` | [run](https://monetizekit.github.io/performance/run/20260905T223944Z-a5bwna.html) | 114 / 144 | 110 / 151 | 156 / 204 | 163 / 219 | 162 / 219 | 146 / 207 | 150 / 226 | 150 / 206 | 420 / 757 |
 
 > entitlement-check in the pre-0 row measured the Vercel CDN, not the API: the
 > route sent `Cache-Control: public, max-age=60` at the time and 59 of every 60
@@ -177,6 +178,71 @@ p95 versus Gate A′:
   at Gate A′. One sample; watch for it at Gate C rather than explain it now.
 - The pipeline's own attribution for this run is the compare link
   `1824545...46718d2`, which is exactly #401.
+
+### Gate C — endpoint query reduction (`0952c11`, 2026-09-05 22:39 UTC)
+
+Build: Gate B plus app-monetizekit-monorepo #402: `recordUsageEvent` resolves
+customer, meter, entity, prior idempotency key and governing budgets in one
+parallel read, reads budgets once per event (or once per group in the batch)
+and writes ingestion logs after the response; `checkEntitlements` loads meters
+for all limit features in one query, published plans once per batch, and drops
+a redundant customer read; composite indexes on `customers (workspaceId,
+archivedAt, createdAt)` and `plans (workspaceId, status)`; and the batch route
+returns `eventId` per item, sending the full event only on `?include=events`.
+
+p95 versus Gate B:
+
+| Scenario | Gate 0 | Gate B | Gate C | Δ vs B | Δ vs 0 | p50 B → C |
+| --- | --- | --- | --- | --- | --- | --- |
+| entitlement-check | 913 | 307 | 204 | −34 % | −78 % | 229 → 156 |
+| entitlement-batch | 1044 | 317 | 219 | −31 % | −79 % | 234 → 163 |
+| customer-reads | 709 | 300 | 219 | −27 % | −69 % | 222 → 162 |
+| catalog-reads | 591 | 278 | 207 | −26 % | −65 % | 208 → 146 |
+| usage-ingest | 835 | 314 | 226 | −28 % | −73 % | 225 → 150 |
+| usage-ingest-backdated | 815 | 299 | 206 | −31 % | −75 % | 229 → 150 |
+| usage-ingest-batch | 2523 | 1137 | 757 | −33 % | −70 % | 789 → 420 |
+| network-floor | 246 | 235 | 144 | −39 % | −41 % | 181 → 114 |
+| platform-baseline | 269 | 249 | 151 | −39 % | −44 % | 175 → 110 |
+
+Read this row with care: the runner's own floor fell by 67 ms at p50
+(network-floor 181 → 114 ms) between Gate B and Gate C, on a build that changed
+nothing on the unauthenticated path. That is the GitHub runner's network, not
+the engine, and it accounts for most of the absolute movement above. The
+engine's share is the distance above the floor:
+
+| Scenario | above floor, p50: Gate 0 | A′ | B | C | Δ B→C |
+| --- | --- | --- | --- | --- | --- |
+| usage-ingest-batch | 1752 | 658 | 608 | 307 | −301 ms (−50 %) |
+| usage-ingest-backdated | 513 | 85 | 48 | 36 | −12 ms (−25 %) |
+| usage-ingest | 515 | 87 | 44 | 36 | −7 ms (−17 %) |
+| entitlement-check | 613 | 87 | 48 | 42 | −5 ms |
+| entitlement-batch | 744 | 92 | 53 | 49 | −3 ms |
+| customer-reads | 420 | 81 | 41 | 48 | +7 ms |
+| catalog-reads | 266 | 69 | 26 | 32 | +6 ms |
+
+- **Gate rule: passed.** Every scenario improved at p95 against Gate B; nothing
+  is worse. The scenarios the phase targeted are the ones that moved above the
+  floor: the batch ingest halved (500 events now cost ~300 ms of engine time
+  against ~1750 ms at Gate 0), and single ingest lost a further quarter of its
+  engine time. The read scenarios are flat within a few milliseconds, as the
+  plan expected — Phase B had already taken their fixed overhead. No C1/C2
+  split is needed: nothing moved the wrong way.
+- Entitlements moved least (−3 to −5 ms above floor). The remaining cost on
+  that path is the awaited `evaluationLog` write, kept on the request because
+  its id is returned to the caller as `evaluationId`; a contract change, not a
+  query one, and out of this plan's scope.
+- Status `slo-breach`, again on entitlement-check alone: 204 ms p95 against a
+  floor-relative target of 189 ms (floor 114 + 75), a 15 ms miss. Seven of
+  eight authenticated SLOs pass.
+- Outliers: customer-reads max 2392 ms and usage-ingest p99 645 ms, single
+  samples each; the Gate B entitlement-batch outlier (3518 ms) did not recur
+  (max 1143 ms). The maxes otherwise sit at 1.1–1.4 s, the bounded limiter
+  timeout shape.
+- Probes from a VM whose own floor did not move (build-info 186 → 193 ms p50)
+  agree on the size of the engine change on the single-request paths:
+  customers 254 → 234 ms, usage 239 → 231 ms, products 216 → 209 ms,
+  entitlement 233 → 231 ms p50.
+- Attribution on the run page: compare link `46718d2...0952c11`, exactly #402.
 
 ## How to read a row
 
