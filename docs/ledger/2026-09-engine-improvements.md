@@ -10,6 +10,7 @@ baseline but never enter it.
 | pre-0 (reference) | `f8c4477` | [run](https://monetizekit.github.io/performance/run/20260905T080237Z-2dso5p.html) | 194 / 265 | 190 / 246 | 112 / 168 | 920 / 1000 | 577 / 649 | 430 / 514 | 664 / 778 | 685 / 766 | 1770 / 2310 |
 | 0 (baseline) | `962132f` | [run](https://monetizekit.github.io/performance/run/20260905T161348Z-ve1uio.html) | 202 / 246 | 201 / 269 | 815 / 913 | 946 / 1044 | 622 / 709 | 468 / 591 | 718 / 835 | 715 / 815 | 1954 / 2523 |
 | A (pdx1) | `8575a1f` | [run](https://monetizekit.github.io/performance/run/20260905T175440Z-l7edxj.html) | 180 / 301 | 178 / 255 | 268 / 346 | 278 / 361 | 262 / 358 | 245 / 322 | 265 / 340 | 265 / 347 | 854 / 5782 |
+| A′ (pdx1 + limiter timeout) | `1824545` | [run](https://monetizekit.github.io/performance/run/20260905T195404Z-1d7dlg.html) | 172 / 230 | 169 / 231 | 259 / 336 | 265 / 344 | 254 / 343 | 241 / 343 | 259 / 339 | 257 / 337 | 831 / 1214 |
 
 > entitlement-check in the pre-0 row measured the Vercel CDN, not the API: the
 > route sent `Cache-Control: public, max-age=60` at the time and 59 of every 60
@@ -83,6 +84,43 @@ p95 versus Gate 0:
   while the API's work shrinks by far more. This is the geometry the phase
   chose, not an engine change; Phase D makes the floor scenarios
   informational for exactly this reason.
+
+### Gate A′ — pdx1 plus the bounded limiter timeout (`1824545`, 2026-09-05 19:54 UTC)
+
+Build: Gate A plus app-monetizekit-monorepo #404 (`timeout: 1000` on the
+Upstash `Ratelimit`; semantics unchanged). Re-run of Gate A on the fixed build,
+so this is the row Phase B is judged against.
+
+p95 versus Gate 0 and Gate A:
+
+| Scenario | Gate 0 | Gate A | Gate A′ | Δ vs 0 | max at A → A′ |
+| --- | --- | --- | --- | --- | --- |
+| entitlement-check | 913 | 346 | 336 | −63 % | 5301 → 1594 |
+| entitlement-batch | 1044 | 361 | 344 | −67 % | 643 → 1311 |
+| customer-reads | 709 | 358 | 343 | −52 % | 5231 → 1325 |
+| catalog-reads | 591 | 322 | 343 | −42 % | 5226 → 1273 |
+| usage-ingest | 835 | 340 | 339 | −59 % | 5327 → 1230 |
+| usage-ingest-backdated | 815 | 347 | 337 | −59 % | 5303 → 1278 |
+| usage-ingest-batch | 2523 | 5782 | 1214 | −52 % | 5966 → 1849 |
+| network-floor | 246 | 301 | 230 | −7 % | 574 → 382 |
+| platform-baseline | 269 | 255 | 231 | −14 % | 676 → 630 |
+
+- **Gate rule: passed.** Every scenario is better than Gate 0; nothing is worse
+  than Gate A by more than the rule (catalog-reads +21 ms / +6 % at p95 is
+  inside it).
+- The maxes tell the mechanism: the ~5.2–5.3 s outliers became ~1.2–1.6 s
+  ones, which is the new 1000 ms bound plus a normal request. The hang on a
+  fresh connection to the us-east-1 Redis is still there; it now costs one
+  second instead of five. The Upstash database moving to a us-west region
+  (infrastructure, not code) removes both the hang and the ~70 ms cross-country
+  round trip that is now the largest single cost in a request.
+- usage-ingest-batch p90 983 ms and p99 1820 ms: the tail above p90 is the
+  bounded limiter timeout on the one-request-every-6-seconds pattern, not batch
+  work. The batch itself (500 events) is 831 ms p50 against 1954 at Gate 0.
+- Floor scenarios came back down (network-floor 301 → 230 ms p95) — the +55 ms
+  at Gate A was also partly the same hang reaching the unauthenticated path
+  through shared instances, not only geometry. Read the floor across several
+  nights before drawing conclusions from it.
 
 ## How to read a row
 
