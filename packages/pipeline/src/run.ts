@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { type Flags, parseFlags, progress, runCli } from "./lib/cli";
+import { parseFlags, progress, runCli } from "./lib/cli";
 import {
   DEFAULT_CONTEXT,
   DEFAULT_SUMMARY,
@@ -22,6 +22,7 @@ import {
   userPathOr,
 } from "./lib/paths";
 import { resolveTrigger, writeRunContext } from "./lib/run-context";
+import { collectNotes } from "./lib/run-notes";
 import { newRunId } from "./lib/run-document";
 import {
   durationSeconds,
@@ -102,19 +103,6 @@ async function checkRateBudgetIdle(
     process.stderr.write(`Warning: ${reason}\n  Continuing because --allow-shared-key was given.\n`);
     return `started with --allow-shared-key: ${reason}`;
   }
-}
-
-/**
- * Notes recorded on the run: the shared-key warning, if the preflight was
- * overridden, followed by any operator-supplied `--note`. Kept as a small
- * pure function so the composition is testable without spawning k6.
- */
-export function collectNotes(flags: Flags, sharedKeyNote: string | null): string[] {
-  const notes: string[] = [];
-  if (sharedKeyNote) notes.push(sharedKeyNote);
-  const note = flags.value("note");
-  if (note) notes.push(note);
-  return notes;
 }
 
 function k6Version(binary: string): string | null {

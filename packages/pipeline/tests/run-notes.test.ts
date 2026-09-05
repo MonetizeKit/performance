@@ -1,13 +1,14 @@
 /**
  * `collectNotes` is the seam between the CLI flags `perf:run` accepts and the
  * notes that end up on the run context (and, from there, the run document).
- * These tests cover the composition without spawning k6.
+ * It is imported from lib/, not from the perf:run entrypoint, which starts a
+ * run on load.
  */
 
 import { describe, expect, it } from "vitest";
 
 import { parseFlags } from "../src/lib/cli";
-import { collectNotes } from "../src/run";
+import { collectNotes } from "../src/lib/run-notes";
 
 describe("collectNotes", () => {
   it("is empty when nothing was said", () => {
