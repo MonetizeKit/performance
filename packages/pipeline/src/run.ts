@@ -37,6 +37,7 @@ import {
   readBuildInfo,
   resolveTarget,
   sampleRateBudget,
+  type Health,
 } from "./lib/target";
 
 const HELP = `
@@ -67,6 +68,14 @@ Environment:
   K6_BINARY         Path to the k6 binary (default: k6 on PATH)
 `;
 
+function describeLimit(
+  health: Pick<Health, "rateLimitState" | "rateLimitPerMinute"> | null,
+  declaredBudget: number,
+): string {
+  if (health?.rateLimitState === "unlimited") return "no per-minute burst limit";
+  return `a ${health?.rateLimitPerMinute ?? declaredBudget}/min limit`;
+}
+
 /**
  * Two samples of the key's window, a gap apart, and a refusal if anything else
  * is spending it. Returns a note for the run when the operator chose to go
@@ -75,9 +84,19 @@ Environment:
  */
 async function checkRateBudgetIdle(
   target: ReturnType<typeof resolveTarget>,
-  health: { rateLimitPerMinute: number | null; rateLimitRemaining: number | null },
+  health: Pick<Health, "rateLimitState" | "rateLimitPerMinute" | "rateLimitRemaining">,
   allowShared: boolean,
 ): Promise<string | null> {
+  if (health.rateLimitState === "unlimited") {
+    // No window to contend for, so another client cannot turn this run into
+    // 429s. It can still add load the run did not offer; that shows up in the
+    // latency figures rather than the error rate, and the note says so.
+    process.stderr.write(
+      "Note: the key has no per-minute burst limit, so the shared-key check does not apply; "
+        + "other clients on this key would add load, not 429s.\n",
+    );
+    return null;
+  }
   if (health.rateLimitPerMinute === null || health.rateLimitRemaining === null) {
     process.stderr.write(
       "Note: the target did not report its remaining rate budget, so the preflight cannot "
@@ -157,6 +176,7 @@ async function main() {
       peak,
       catalog.requestsPerMinuteBudget,
       health.rateLimitPerMinute,
+      health.rateLimitState,
     );
     sharedKeyNote = await checkRateBudgetIdle(target, health, flags.has("allow-shared-key"));
   }
@@ -172,8 +192,8 @@ async function main() {
       + `against ${target.environment} at ${target.baseUrl} (from ${target.baseUrlSource})\n`
       + `  workspace ${health?.workspaceName ?? "unknown"}, `
       + `build ${build.appSha?.slice(0, 7) ?? "unknown"}, k6 ${version}\n`
-      + `  peak ${Math.round(peak)} authenticated req/min against a `
-      + `${health?.rateLimitPerMinute ?? catalog.requestsPerMinuteBudget}/min limit, `
+      + `  peak ${Math.round(peak)} authenticated req/min against `
+      + describeLimit(health, catalog.requestsPerMinuteBudget) + ", "
       + `~${Math.ceil(wall / 60)} minutes of offered load`,
   );
 
@@ -220,6 +240,7 @@ async function main() {
     // these numbers mean something different than at high load, and the next
     // reader cannot tell which they are looking at without this.
     rateLimitPerMinute: health?.rateLimitPerMinute ?? null,
+    rateLimitState: health?.rateLimitState ?? "unknown",
     k6Version: version,
     k6ExitCode: k6.status,
     summaryPath,

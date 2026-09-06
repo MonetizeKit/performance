@@ -142,16 +142,28 @@ export async function readBuildInfo(
   }
 }
 
+/**
+ * What the API said about this key's per-minute burst limit.
+ *
+ * - `limited`: `X-RateLimit-Limit` was present; the workload must fit under it.
+ * - `unlimited`: the limited probe answered 2xx with no `X-RateLimit-*` headers.
+ *   The API omits them precisely when the workspace's plan sets no burst limit
+ *   (`api_rate_limit_per_minute` absent or 0), so this is a statement, not a gap.
+ * - `unknown`: the probe did not answer 2xx, so nothing can be said either way.
+ */
+export type RateLimitState = "limited" | "unlimited" | "unknown";
+
 export interface Health {
   workspaceName: string | null;
+  rateLimitState: RateLimitState;
   /**
    * Requests per minute the API says this key may make, from
-   * `X-RateLimit-Limit`. Null when the target does not report it.
+   * `X-RateLimit-Limit`. Null unless `rateLimitState` is `limited`.
    */
   rateLimitPerMinute: number | null;
   /**
    * Requests left in the key's current window after the probe, from
-   * `X-RateLimit-Remaining`. Null when the target does not report it.
+   * `X-RateLimit-Remaining`. Null unless `rateLimitState` is `limited`.
    */
   rateLimitRemaining: number | null;
 }
@@ -216,14 +228,18 @@ export async function healthCheck(
   // Two requests before a fifteen-minute run is a rounding error, and knowing
   // the real ceiling is what keeps the run from being fifteen minutes of 429s.
   const probe = await fetchImpl(`${target.baseUrl}${LIMIT_PROBE_PATH}`, { headers });
-  const limit = Number(probe.headers.get("x-ratelimit-limit"));
-  const remaining = Number(probe.headers.get("x-ratelimit-remaining"));
+  const limitHeader = probe.headers.get("x-ratelimit-limit");
+  const remainingHeader = probe.headers.get("x-ratelimit-remaining");
+  const limit = Number(limitHeader);
+  const remaining = Number(remainingHeader);
+  const limited = limitHeader !== null && Number.isFinite(limit) && limit > 0;
 
   return {
     workspaceName: typeof body.name === "string" ? body.name : null,
-    rateLimitPerMinute: Number.isFinite(limit) && limit > 0 ? limit : null,
+    rateLimitState: limited ? "limited" : probe.ok ? "unlimited" : "unknown",
+    rateLimitPerMinute: limited ? limit : null,
     rateLimitRemaining:
-      probe.headers.get("x-ratelimit-remaining") !== null && Number.isFinite(remaining) && remaining >= 0
+      limited && remainingHeader !== null && Number.isFinite(remaining) && remaining >= 0
         ? remaining
         : null,
   };
@@ -333,7 +349,20 @@ export function assertWorkloadFitsBudget(
   peakRequestsPerMinute: number,
   declaredBudget: number,
   observedLimit: number | null,
+  state: RateLimitState = observedLimit === null ? "unknown" : "limited",
 ): void {
+  if (state === "unlimited") {
+    // Nothing to fit under. The catalog's budget is now a harness choice about
+    // how much load to offer, which is worth saying because a reader of the
+    // declared budget would otherwise take it for a platform cap.
+    process.stderr.write(
+      "Note: this key has no per-minute burst limit (the plan sets no api_rate_limit_per_minute), "
+        + `so the ${declaredBudget}/min budget in packages/api-workload/scenarios.json is the `
+        + "harness's own choice of offered load, not a platform ceiling.\n",
+    );
+    return;
+  }
+
   const limit = observedLimit ?? declaredBudget;
 
   if (peakRequestsPerMinute > limit) {

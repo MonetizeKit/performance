@@ -173,6 +173,7 @@ describe("preflight", () => {
 
     expect(health).toEqual({
       workspaceName: "MonetizeKit Showcase",
+      rateLimitState: "limited",
       rateLimitPerMinute: 100,
       rateLimitRemaining: 99,
     });
@@ -231,11 +232,33 @@ describe("preflight", () => {
     );
   });
 
-  it("reports no limit when the target does not send the header", async () => {
+  it("reports the key as unlimited when a 2xx probe carries no rate-limit headers", async () => {
+    // The API omits X-RateLimit-* exactly when the workspace's plan sets no
+    // burst limit (api_rate_limit_per_minute absent or 0), so their absence on
+    // a successful probe is a statement about the key, not a reporting gap.
     const health = await healthCheck(TARGET, responder({ body: { name: "x" } }));
 
+    expect(health.rateLimitState).toBe("unlimited");
     expect(health.rateLimitPerMinute).toBeNull();
     expect(health.rateLimitRemaining).toBeNull();
+  });
+
+  it("reports the limit as unknown when the probe itself did not succeed", async () => {
+    let calls = 0;
+    const identityThenFailure = (async () => {
+      calls += 1;
+      return calls === 1
+        ? new Response(JSON.stringify({ name: "x" }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          })
+        : new Response("upstream timeout", { status: 504 });
+    }) as unknown as typeof fetch;
+
+    const health = await healthCheck(TARGET, identityThenFailure);
+
+    expect(health.rateLimitState).toBe("unknown");
+    expect(health.rateLimitPerMinute).toBeNull();
   });
 
   it("reads the limit from a rate-limited endpoint, not from the identity call", async () => {
@@ -258,6 +281,7 @@ describe("preflight", () => {
 
     expect(health).toEqual({
       workspaceName: "Showcase",
+      rateLimitState: "limited",
       rateLimitPerMinute: 100,
       rateLimitRemaining: null,
     });
@@ -293,6 +317,13 @@ describe("workload budget guard", () => {
   it("says so when the real limit is not the one the catalog documents", () => {
     expect(stderrFrom(() => assertWorkloadFitsBudget(60, 100, 500))).toMatch(
       /limit is 500\/min, not the 100\/min/,
+    );
+  });
+
+  it("waives the budget check for an unlimited key and says the budget is the harness's own", () => {
+    expect(() => assertWorkloadFitsBudget(1200, 100, null, "unlimited")).not.toThrow();
+    expect(stderrFrom(() => assertWorkloadFitsBudget(1200, 100, null, "unlimited"))).toMatch(
+      /no per-minute burst limit.*harness's own choice/s,
     );
   });
 

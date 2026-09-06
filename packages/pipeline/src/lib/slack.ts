@@ -165,7 +165,9 @@ export function buildSlackMessage(input: SlackReportInput): SlackMessage {
           `workload ${document.workloadVersion}`,
           document.rateLimitPerMinute !== null
             ? `${document.rateLimitPerMinute} req/min allowed`
-            : "rate limit unknown",
+            : document.rateLimitState === "unlimited"
+              ? "no per-key rate limit"
+              : "rate limit unknown",
           ...(links.length > 0 ? [links.join(" · ")] : []),
         ].join("  |  "),
       },
