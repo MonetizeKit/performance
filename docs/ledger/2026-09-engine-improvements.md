@@ -13,6 +13,7 @@ baseline but never enter it.
 | A′ (pdx1 + limiter timeout) | `1824545` | [run](https://monetizekit.github.io/performance/run/20260905T195404Z-1d7dlg.html) | 172 / 230 | 169 / 231 | 259 / 336 | 265 / 344 | 254 / 343 | 241 / 343 | 259 / 339 | 257 / 337 | 831 / 1214 |
 | B (audit index + after) | `46718d2` | [run](https://monetizekit.github.io/performance/run/20260905T211614Z-ifjakq.html) | 181 / 235 | 175 / 249 | 229 / 307 | 234 / 317 | 222 / 300 | 208 / 278 | 225 / 314 | 229 / 299 | 789 / 1137 |
 | C (query reduction) | `0952c11` | [run](https://monetizekit.github.io/performance/run/20260905T223944Z-a5bwna.html) | 114 / 144 | 110 / 151 | 156 / 204 | 163 / 219 | 162 / 219 | 146 / 207 | 150 / 226 | 150 / 206 | 420 / 757 |
+| D (harness recalibration; same build as C) | `0952c11` | [run](https://monetizekit.github.io/performance/run/20260906T000017Z-83kmok.html) | 164 / 219 | 162 / 215 | 207 / 277 | 214 / 280 | 209 / 277 | 196 / 263 | 200 / 261 | 199 / 264 | 629 / 1530 |
 
 > entitlement-check in the pre-0 row measured the Vercel CDN, not the API: the
 > route sent `Cache-Control: public, max-age=60` at the time and 59 of every 60
@@ -243,6 +244,121 @@ engine's share is the distance above the floor:
   customers 254 → 234 ms, usage 239 → 231 ms, products 216 → 209 ms,
   entitlement 233 → 231 ms p50.
 - Attribution on the run page: compare link `46718d2...0952c11`, exactly #402.
+
+### Gate D — harness recalibration, same application build (`0952c11`, 2026-09-06 00:00 UTC)
+
+Build: unchanged from Gate C. What changed is the harness (MonetizeKit/performance
+#17): `network-floor` and `platform-baseline` are informational and carry no
+verdict; an authenticated response answered by a shared cache
+(`x-vercel-cache: HIT`) is a failed observation with a `rate<=0` threshold;
+the nightly cron moved to 04:17 UTC; `docs/methodology.md` records that
+`entitlement-check` measured the CDN before the `private` header. The k6 load is
+untouched (`workloadVersion` stays `w2`), so this row and Gate C are two runs of
+the same workload against the same build, 80 minutes apart: **the harness's
+own noise floor**. The pipeline's attribution agrees — the run page says
+`same-build`.
+
+Same-build spread, Gate C → Gate D:
+
+| Scenario | p50 C → D | Δ p50 | p95 C → D | Δ p95 | p50 above floor C → D | p95 above floor C → D |
+| --- | --- | --- | --- | --- | --- | --- |
+| network-floor | 114 → 164 | **+50** | 144 → 219 | +75 | — | — |
+| platform-baseline | 110 → 162 | +51 | 151 → 215 | +64 | — | — |
+| entitlement-check | 156 → 207 | +51 | 204 → 277 | +73 | 42 → 43 | 59 → 58 |
+| entitlement-batch | 163 → 214 | +52 | 219 → 280 | +62 | 49 → 51 | 74 → 61 |
+| customer-reads | 162 → 209 | +48 | 219 → 277 | +58 | 48 → 46 | 75 → 57 |
+| catalog-reads | 146 → 196 | +51 | 207 → 263 | +56 | 32 → 32 | 63 → 43 |
+| usage-ingest | 150 → 200 | +50 | 226 → 261 | +36 | 36 → 37 | 81 → 42 |
+| usage-ingest-backdated | 150 → 199 | +50 | 206 → 264 | +58 | 36 → 36 | 61 → 45 |
+| usage-ingest-batch | 420 → 629 | +209 | 757 → 1530 | +773 | 307 → 466 | 613 → 1311 |
+
+What the spread says:
+
+- **Absolute numbers between two runs move with the runner, not the engine.**
+  The floor rose 50 ms at p50 and every single-request scenario rose by
+  48–52 ms — the same amount, in the same direction, on a build that did not
+  change. Between Gate B and Gate C the floor had fallen 67 ms and everything
+  fell with it. Read any night-to-night absolute delta of ±50 ms at p50 and
+  ±75 ms at p95 as the runner until the floor says otherwise.
+- **Above the floor, the engine repeats to within ±3 ms at p50** on the six
+  single-request scenarios (42/49/48/32/36/36 → 43/51/46/32/37/36), and its
+  p95 spread above the floor is 1–39 ms. That is the resolution at which
+  engine deltas can be claimed from one gate run: roughly 5 ms at p50, 40 ms at
+  p95.
+- **The pipeline's absolute regression rule would have flagged this same-build
+  pair.** Six of seven authenticated scenarios are "worse" than Gate C by
+  more than 10 % and more than 20 ms at p95 (+16 % to +36 %) with no code
+  change. The rolling median over several nightlies dampens this, but the
+  rule's unit is wrong: it should judge distance above the floor, the way the
+  SLOs already do. Recorded here as the next harness change; it needs a
+  `workloadVersion`-neutral change to `baseline.ts` and a note in the ledger
+  when it lands.
+- **usage-ingest-batch's p95 is not a stable statistic at n=100.** Its tail
+  is bimodal — normal requests at 0.4–0.9 s and requests that waited out the
+  1000 ms limiter bound on a fresh cross-region Redis connection at 1.4–1.7 s
+  (one request every 6 s keeps its connection cold; see Gate A). p95 is the
+  five slowest of 100 requests, so one or two more hangs move it from 757 to
+  1530 ms on the same build. Its p50 above floor moved 307 → 466 ms, more than
+  the runner explains; the batch path's 500-row inserts are the one place the
+  Delivery pooler's own variance shows. Read this scenario at p50 and p90 until
+  the Upstash database moves to a us-west region, which removes the second
+  mode.
+- Status `slo-breach` on `entitlement-check` alone (277 ms p95 against
+  164 + 75 = 239 ms): the SLO compares the scenario's p95 with the floor's p50,
+  so a wider floor tail (p95 − p50 was 30 ms at Gate C and 55 ms here) eats the
+  budget on its own. Above the floor's p95, the scenario is at 58 ms both times.
+- The floor scenarios now show `informational` on the run page and no longer
+  bear on the status; the `cdn_hits_authenticated` threshold evaluated over
+  every authenticated request with zero hits.
+
+## Close-out: Gate 0 → Gate D
+
+Five gates, four application builds, one harness change. All runs on the
+Delivery environment against the same tenant, dataset `v2`, workload `w2`.
+
+| Scenario | Gate 0 p50 / p95 | Gate D p50 / p95 | Δ p95 | Engine time above floor, p50: Gate 0 → D |
+| --- | --- | --- | --- | --- |
+| entitlement-check | 815 / 913 | 207 / 277 | −70 % | 613 → 43 ms (−93 %) |
+| entitlement-batch | 946 / 1044 | 214 / 280 | −73 % | 744 → 51 ms (−93 %) |
+| customer-reads | 622 / 709 | 209 / 277 | −61 % | 420 → 46 ms (−89 %) |
+| catalog-reads | 468 / 591 | 196 / 263 | −56 % | 266 → 32 ms (−88 %) |
+| usage-ingest | 718 / 835 | 200 / 261 | −69 % | 515 → 37 ms (−93 %) |
+| usage-ingest-backdated | 715 / 815 | 199 / 264 | −68 % | 513 → 36 ms (−93 %) |
+| usage-ingest-batch | 1954 / 2523 | 629 / 1530 | −39 % | 1752 → 466 ms (−73 %) |
+
+Where it came from, in order of size:
+
+1. **Phase A, functions in `pdx1`** (Gate 0 → A′): −42 % to −67 % at p95 on
+   every authenticated scenario. One ~60 ms cross-country round trip removed
+   from each of the 3–9 database calls a request made. It also exposed the
+   limiter's unbounded 5 s timeout against a us-east-1 Redis, fixed in A′.
+2. **Phase B, audit index and `after()`** (A′ → B): −6 % to −19 % at p95;
+   most on the read scenarios, whose handlers had the least other work. The
+   trigger's lookup went from a 37.9 ms sequential scan to a 0.049 ms index
+   probe, on every API call.
+3. **Phase C, query reduction** (B → C): batch ingest −50 % above the floor,
+   single ingest −17 % to −25 %, entitlements −3 to −5 ms, reads flat. The
+   floor moved −67 ms in the same interval, so the absolute row overstates the
+   phase.
+4. **Phase D, harness** (C → D, same build): no engine change; the run
+   quantified the harness's noise floor above.
+
+Every authenticated single-request scenario now spends 32–51 ms of engine time
+per request above whatever the network costs, against 266–744 ms at Gate 0.
+Seven of eight authenticated SLOs pass at every gate from B onward; the one
+that does not, `entitlement-check`, misses a target that is itself defined
+against the floor's p50 and is within the floor's own p95 tail.
+
+What remains, none of it in this plan's scope:
+
+- Upstash in a us-west region: removes the 1 s hang mode from every tail and
+  the ~70 ms Redis round trip, now the largest single cost in a request.
+- A floor-relative regression rule in the pipeline, per the Gate D reading.
+- Whether public API call records belong in the hash-chained audit table at
+  all (Phase B made them cheap; the per-workspace advisory lock still
+  serializes them) — a separate design decision.
+- The awaited `evaluationLog` write on the entitlement path, kept because its
+  id is part of the response contract.
 
 ## How to read a row
 
