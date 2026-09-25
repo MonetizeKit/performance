@@ -161,7 +161,7 @@ function citation(input: RunPageInput): string {
     <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#374151;">
       MonetizeKit ${escapeHtml(document.environment)}, ${escapeHtml(document.timestamp.slice(0, 10))},
       build <code>${escapeHtml(document.appSha?.slice(0, 7) ?? "unknown")}</code>: ${escapeHtml(claim)},
-      measured at ${document.rateLimitPerMinute !== null ? `up to ${document.rateLimitPerMinute} requests/minute` : "the offered load below"}
+      measured at ${describeRateLimitForCitation(document)}
       against dataset ${escapeHtml(document.datasetVersion ?? "unknown")} with workload ${escapeHtml(document.workloadVersion)}.
     </p>
     ${
@@ -232,7 +232,7 @@ export function renderRunPage(input: RunPageInput): string {
       ${detail("Target", escapeHtml(document.baseUrl))}
       ${detail("Dataset", escapeHtml(document.datasetVersion ?? "unknown"))}
       ${detail("Workload", `${escapeHtml(document.workloadVersion)} · k6 ${escapeHtml(document.k6Version ?? "unknown")}`)}
-      ${detail("Rate limit", document.rateLimitPerMinute !== null ? `${document.rateLimitPerMinute} requests/minute` : "not reported")}
+      ${detail("Rate limit", describeRateLimit(document))}
       ${detail("Trigger", escapeHtml(document.trigger))}
       ${detail("Duration", `${Math.round(document.durationMs / 1000)}s`)}
       ${detail("Baseline", document.baseline ? `median of ${document.baseline.baselineRuns} comparable run(s)${document.baseline.forming ? ", still forming" : ""}` : "not computed")}
@@ -252,4 +252,18 @@ export function renderRunPage(input: RunPageInput): string {
   </div>
 </body>
 </html>`;
+}
+
+function describeRateLimit(document: Pick<RunDocument, "rateLimitPerMinute" | "rateLimitState">): string {
+  if (document.rateLimitPerMinute !== null) return `${document.rateLimitPerMinute} requests/minute`;
+  return document.rateLimitState === "unlimited" ? "none (plan sets no burst limit)" : "not reported";
+}
+
+function describeRateLimitForCitation(
+  document: Pick<RunDocument, "rateLimitPerMinute" | "rateLimitState">,
+): string {
+  if (document.rateLimitPerMinute !== null) return `up to ${document.rateLimitPerMinute} requests/minute`;
+  return document.rateLimitState === "unlimited"
+    ? "the offered load below, with no per-key rate limit in force"
+    : "the offered load below";
 }

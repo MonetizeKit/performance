@@ -9,6 +9,7 @@
  * silently substitute today's values for last night's measurements.
  */
 
+import type { RateLimitState } from "./target";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
@@ -34,6 +35,13 @@ export interface RunContext {
    */
   catalogPath?: string;
   rateLimitPerMinute: number | null;
+  /**
+   * Whether `rateLimitPerMinute` is null because the key has no burst limit
+   * (`unlimited`) or because the preflight could not tell (`unknown`).
+   * Optional only because contexts written before this field existed are
+   * still readable.
+   */
+  rateLimitState?: RateLimitState;
   k6Version: string | null;
   k6ExitCode: number | null;
   summaryPath: string;
