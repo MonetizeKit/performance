@@ -104,18 +104,25 @@ database, and each scenario's latency would depend on the others' workloads.
 `startTime` offsets and a settling gap between scenarios cost about seventy
 minutes of wall time and buy clean attribution.
 
-**Load is capped by the API's own rate limit.** The target key is allowed 100
-authenticated requests per rolling minute. The limiter's window does not reset
-between scenarios, so the constraint applies to the run as a whole. Authenticated
-scenarios therefore run at one request per second and earn their sample counts
-from duration: each runs for ten minutes, so a scenario yields 600 samples and
-its p95 rests on the slowest thirty of them rather than the slowest six a
-two-minute run would offer. Before offering any load, `perf:run` reads the key's
-actual `X-RateLimit-Limit` and refuses to start if the workload would exceed it,
-because a run full of 429s measures the limiter, not the platform.
+**Load is a harness choice, checked against the API's rate limit when there is
+one.** The authenticated workload was tuned while the target key was allowed 100
+requests per rolling minute: scenarios run at one request per second and earn
+their sample counts from duration — ten minutes each, so a scenario yields 600
+samples and its p95 rests on the slowest thirty of them rather than the slowest
+six a two-minute run would offer. Since September 2026 the platform's per-key
+burst limit is a plan lever (`api_rate_limit_per_minute`; absent or `0` means no
+limit, and the API then sends no `X-RateLimit-*` headers). Before offering any
+load, `perf:run` probes a rate-limited endpoint and records what it finds in the
+run document's `rateLimitState`: `limited` (it refuses to start if the workload
+would exceed the advertised limit, because a run full of 429s measures the
+limiter, not the platform), `unlimited` (the workload's declared budget is the
+harness's own choice of offered load and is noted as such), or `unknown` (the
+probe did not succeed; the declared budget is used and the note says so).
 
-**The key must be idle.** For the same reason, `perf:run` refuses to start
-while anything else is spending the key's budget. It reads
+**The key must be idle.** For the same reason, when a limit is in force
+`perf:run` refuses to start while anything else is spending the key's budget
+(with no limit there is no window to contend for, and other clients show up as
+added load in the latency figures rather than as 429s). It reads
 `X-RateLimit-Remaining` alongside the limit and refuses if more of the window is
 already gone than its own probe accounts for (a tolerance of three covers a
 stray manual call); then it samples the window again fifteen seconds later and

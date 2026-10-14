@@ -11,14 +11,19 @@
  * that comparability, and the analyzer refuses to mix across them.
  */
 
+import type { RateLimitState } from "./target";
+
 /**
+ * 5: `rateLimitState` says whether a null `rateLimitPerMinute` means the plan
+ *    sets no per-key burst limit (`unlimited`) or the preflight could not tell.
+ * 4: informational scenarios (`informational: true`) carry no verdict.
  * 3: `slo-breach` is a run status of its own, and a scenario's `sloP95Ms` may be
  *    resolved per run from a budget above the measured network floor
  *    (`sloP95AboveFloorMs`, `floorP50Ms`).
  * 2: `changeSet.detail` discriminates how much attribution the run carries.
  * 1: the original shape, from when the harness lived beside the application.
  */
-export const RUN_DOCUMENT_SCHEMA_VERSION = 4;
+export const RUN_DOCUMENT_SCHEMA_VERSION = 5;
 
 /** Where a run came from. Ad-hoc runs are recorded but never form a baseline. */
 export type RunTrigger = "schedule" | "dispatch" | "local";
@@ -167,6 +172,12 @@ export interface RunDocument {
    * limit is measuring a different thing.
    */
   rateLimitPerMinute: number | null;
+  /**
+   * Why `rateLimitPerMinute` may be null: `unlimited` when the plan sets no
+   * burst limit (the API sends no `X-RateLimit-*` headers), `unknown` when the
+   * preflight could not tell. Absent on documents written before schema 5.
+   */
+  rateLimitState?: RateLimitState;
   k6Version: string | null;
   durationMs: number;
   /** True when k6 itself reported a threshold breach. */

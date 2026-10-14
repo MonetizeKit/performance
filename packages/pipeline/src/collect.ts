@@ -108,6 +108,7 @@ async function main() {
     datasetVersion: context.datasetVersion,
     workloadVersion: context.workloadVersion,
     rateLimitPerMinute: context.rateLimitPerMinute ?? null,
+    rateLimitState: context.rateLimitState ?? (context.rateLimitPerMinute === null ? "unknown" : "limited"),
     k6Version: context.k6Version,
     durationMs: normalized.durationMs,
     thresholdsBreached: normalized.thresholdsBreached || context.k6ExitCode !== 0,
