@@ -1,0 +1,4 @@
+{
+  "name": "monetizekit-performance",
+  "install": "pnpm install --frozen-lockfile"
+}
