@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>delivery performance run 20261029T105223Z-djgtzg</title>
+  <link rel="canonical" href="https://monetizekit.github.io/performance/run/20261029T105223Z-djgtzg.html" />
+</head>
+<body style="margin:0;padding:28px 20px 64px;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111827;">
+  <div style="max-width:980px;margin:0 auto;">
+    <p style="margin:0 0 16px;font-size:13px;"><a href="../" style="color:#2563eb;text-decoration:none;">← All performance runs</a></p>
+
+    <div style="background:#fff7ed;border-left:4px solid #f97316;padding:14px 18px;border-radius:4px;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">SLO breach</div>
+      <h1 style="margin:6px 0 0;font-size:20px;">delivery · 2026-10-29 10:52 UTC</h1>
+      <div style="margin-top:4px;font-size:12px;color:#6b7280;font-family:ui-monospace,monospace;">20261029T105223Z-djgtzg</div>
+    </div>
+
+    <p style="margin:18px 0 0;font-size:14px;line-height:1.55;">1 scenario(s) missed their SLO without moving against the baseline — a target miss, not a change since the last run. Worst: entitlement-check at p95 273ms against a 263ms (floor 188ms + 75ms) SLO and a 264ms baseline.</p>
+
+    <div style="margin-top:24px;padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Citing this run</div>
+    <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#374151;">
+      MonetizeKit delivery, 2026-10-29,
+      build <code>d8d1910</code>: entitlement-batch p95 292ms,
+      measured at the offered load below, with no per-key rate limit in force
+      against dataset v2 with workload w2.
+    </p>
+    <p style="margin:8px 0 0;font-size:12px;"><a href="https://monetizekit.github.io/performance/run/20261029T105223Z-djgtzg.html" style="color:#2563eb;word-break:break-all;">https://monetizekit.github.io/performance/run/20261029T105223Z-djgtzg.html</a></p>
+    <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">
+      This URL is permanent. Run ids are timestamped and never reused, so a later run cannot change what this page says.
+    </p>
+  </div>
+
+    <h2 style="margin:32px 0 8px;font-size:16px;">Scenarios</h2>
+    <table style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+      <thead>
+        <tr style="text-align:left;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;background:#f9fafb;">
+          <th style="padding:8px 10px;">Scenario</th>
+          <th style="padding:8px 10px;text-align:right;">p95</th>
+          <th style="padding:8px 10px;text-align:right;">p50</th>
+          <th style="padding:8px 10px;text-align:right;">p99</th>
+          <th style="padding:8px 10px;text-align:right;">Baseline</th>
+          <th style="padding:8px 10px;text-align:right;">&Delta;</th>
+          <th style="padding:8px 10px;text-align:right;">SLO</th>
+          <th style="padding:8px 10px;text-align:right;">Requests</th>
+          <th style="padding:8px 10px;text-align:right;">Errors</th>
+          <th style="padding:8px 10px;">Verdict</th>
+        </tr>
+      </thead>
+      <tbody><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">network-floor</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">263ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">188ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">411ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">216ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+21%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">250ms, informational</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">60</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">informational</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">platform-baseline</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">252ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">183ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">351ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">222ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+14%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">400ms, informational</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">301</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;">informational</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">entitlement-check</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">273ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">205ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">392ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">264ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+3%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">263ms (floor 188ms + 75ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">601</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#b91c1c;">slo-breach</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">entitlement-batch</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">292ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">212ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">393ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">255ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+15%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">338ms (floor 188ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">600</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#059669;">pass</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">customer-reads</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">284ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">211ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">418ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">260ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+9%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">388ms (floor 188ms + 200ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">601</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#059669;">pass</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">catalog-reads</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">259ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">197ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">303ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">235ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+11%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">338ms (floor 188ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">600</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#059669;">pass</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">usage-ingest</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">261ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">196ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">290ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">246ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+6%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">338ms (floor 188ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">600</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#059669;">pass</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">usage-ingest-backdated</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">267ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">197ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">343ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">240ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+11%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">338ms (floor 188ms + 150ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">600</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#059669;">pass</td>
+      </tr><tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:ui-monospace,monospace;font-size:13px;">usage-ingest-batch</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">777ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">663ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">861ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">765ms</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;">+1%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;white-space:nowrap;">1688ms (floor 188ms + 1500ms)</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">101</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#6b7280;">0.00%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#059669;">pass</td>
+      </tr></tbody>
+    </table>
+
+    <h2 style="margin:32px 0 8px;font-size:16px;">What shipped since the last measured build</h2>
+      <p style="margin:0;color:#6b7280;font-size:13px;">Nothing: the same build was measured as last time, so any movement here is environmental rather than ours.</p>
+
+    <h2 style="margin:32px 0 8px;font-size:16px;">Conditions</h2>
+    <table style="font-size:13px;color:#374151;">
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Build</td><td><code>d8d1910bb8db001d98b5ee8dd871fe3f6f0626f8</code></td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Target</td><td>https://app.monetizekit.delivery</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Dataset</td><td>v2</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Workload</td><td>w2 · k6 1.4.0</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Rate limit</td><td>none (plan sets no burst limit)</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Trigger</td><td>schedule</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Duration</td><td>4332s</td></tr>
+      <tr><td style="padding:3px 16px 3px 0;color:#6b7280;white-space:nowrap;">Baseline</td><td>median of 14 comparable run(s)</td></tr>
+    </table>
+
+    
+
+    <p style="margin:32px 0 0;font-size:12px;color:#9ca3af;">
+      <a href="../runs/delivery/2026-10-29-d8d1910-20261029T105223Z-djgtzg.json" style="color:#2563eb;">Raw Run Document (JSON)</a> · Machine-written by <code>packages/pipeline/src/persist.ts</code>. Append-only: this run is never rewritten.
+    </p>
+  </div>
+</body>
+</html>
